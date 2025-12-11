@@ -3,675 +3,480 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Stall Audit — Local App (Firebase + localStorage)</title>
+<title>Stall Audit — Local System</title>
 
-<!-- Chart.js for charts -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- jsPDF and html2canvas for PDF export -->
+
+<!-- jsPDF + html2canvas (for PDF export) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<!-- Firebase SDK (Auth only) -->
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
-
 <style>
 :root{
-  --bg:#f5f7fb; --card:#fff; --accent:#1f71ff; --muted:#6b7280; --danger:#d9534f;
+  --bg:#f5f7fb; --card:#ffffff; --accent:#1f71ff; --muted:#6b7280; --danger:#d9534f;
 }
-*{box-sizing:border-box}
-body{font-family:Inter,Arial,Helvetica,sans-serif;margin:0;background:var(--bg);color:#111}
-.header{background:#fff;padding:12px 16px;border-bottom:1px solid #e6eefc}
-.header .wrap{max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-.container{max-width:1100px;margin:18px auto;padding:0 16px}
-.card{background:var(--card);padding:14px;border-radius:8px;box-shadow:0 2px 8px rgba(17,24,39,0.04);margin-bottom:16px}
-.row{display:flex;gap:12px;align-items:center}
-input,select,textarea{padding:8px;border:1px solid #e6eefc;border-radius:6px;width:100%}
-label{font-size:0.9rem;color:#333}
-.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.form-grid .full{grid-column:1/-1}
-.button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
-.button.secondary{background:#fff;border:1px solid #e6eefc;color:#111}
-.small{padding:6px 8px;font-size:0.9rem}
-.table-wrap{overflow:auto;max-height:420px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;font-size:0.9rem}
-th{background:#fafafa;position:sticky;top:0}
-.actions button{margin-right:6px}
-.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.summary-grid{display:flex;gap:12px;flex-wrap:wrap}
-.summary-card{background:#fff;padding:12px;border-radius:8px;min-width:140px;text-align:center;box-shadow:0 1px 4px rgba(16,24,40,0.03)}
-.footer{max-width:1100px;margin:20px auto;padding:12px;color:var(--muted);font-size:0.9rem}
-.badge{display:inline-block;padding:4px 8px;border-radius:6px;background:#eef2ff;color:#1f71ff;font-weight:600}
-@media(max-width:900px){
-  .form-grid{grid-template-columns:repeat(1,1fr)}
-}
+body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#111;}
+.header{background:#fff;padding:12px 16px;border-bottom:1px solid #e2e8f0;}
+.header .wrap{max-width:1100px;margin:auto;display:flex;justify-content:space-between;align-items:center;}
+.container{max-width:1100px;margin:20px auto;padding:0 16px;}
+.card{background:var(--card);padding:16px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.05);margin-bottom:16px;}
+input,select,textarea{width:100%;padding:8px;margin:6px 0;border:1px solid #cfd7e3;border-radius:6px;}
+label{font-size:0.9rem;font-weight:600;}
+.button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;}
+.button.secondary{background:#fff;color:#1f71ff;border:1px solid #1f71ff;}
+.button.small{padding:6px 8px;font-size:0.85rem;}
+.table-wrap{overflow:auto;max-height:350px;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left;font-size:0.9rem;}
+th{background:#f8fafc;position:sticky;top:0;}
+.summary{display:flex;gap:10px;flex-wrap:wrap;}
+.summary .box{background:#fff;padding:12px;border-radius:6px;min-width:140px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
 </style>
+
 </head>
 <body>
 
 <header class="header">
   <div class="wrap">
-    <div><strong>Stall Audit — Local App</strong></div>
-    <div id="authArea">
-      <!-- Auth controls injected dynamically -->
-      <button id="btnSignup" class="button small">Sign up</button>
-      <button id="btnLogin" class="button small secondary">Sign in</button>
-      <span id="userEmail" style="margin-left:10px;"></span>
+    <h2>Stall Audit System</h2>
+    <div>
+      <button id="exportCSV" class="button small">Export CSV</button>
+      <button id="exportPDF" class="button small">Export PDF</button>
+      <button id="clearAll" class="button small secondary">Clear All Data</button>
     </div>
   </div>
 </header>
 
 <main class="container">
 
-  <!-- LOGIN / SIGNUP CARD (modal-like) -->
-  <div id="authCard" class="card" style="display:none;">
-    <h3 id="authTitle">Sign in</h3>
-    <div style="max-width:480px">
-      <label>Email</label>
-      <input id="authEmail" type="email" placeholder="admin@company.com" />
-      <label>Password</label>
-      <input id="authPass" type="password" placeholder="password" />
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button id="authSubmit" class="button small">Submit</button>
-        <button id="authCancel" class="button small secondary">Cancel</button>
-      </div>
-      <p id="authMsg" style="color:var(--danger);margin-top:8px"></p>
+<!-- Add/Edit Form -->
+<div class="card">
+  <h3>Add / Edit Entry</h3>
+
+  <form id="entryForm">
+    <input type="hidden" id="editId"/>
+
+    <label>Stall</label>
+    <input id="stall" placeholder="Stall A / Stall B" required>
+
+    <label>Date</label>
+    <input id="date" type="date" required>
+
+    <label>Timestamp</label>
+    <input id="timestamp" readonly>
+
+    <div class="card" style="background:#fafbff;margin-top:12px;">
+      <label>Daily Sales Submitted?</label>
+      <select id="sales_sub"><option>Yes</option><option>No</option></select>
+
+      <label>Daily Feedback Submitted?</label>
+      <select id="feedback_sub"><option>Yes</option><option>No</option></select>
+
+      <label>Breakfast On Time?</label>
+      <select id="breakfast"><option>Yes</option><option>No</option></select>
+
+      <label>Lunch On Time?</label>
+      <select id="lunch"><option>Yes</option><option>No</option></select>
+
+      <label>Dinner On Time?</label>
+      <select id="dinner"><option>Yes</option><option>No</option></select>
+
+      <label>Temperature Posted?</label>
+      <select id="temp_photo"><option>Yes</option><option>No</option></select>
+
+      <label>Staff Behaviour Good?</label>
+      <select id="behaviour"><option>Yes</option><option>No</option></select>
+
+      <label>Staff Hygiene Good?</label>
+      <select id="hygiene"><option>Yes</option><option>No</option></select>
+
+      <label>Stall Clean?</label>
+      <select id="stall_clean"><option>Yes</option><option>No</option></select>
+
+      <label>Food Quality Complaint?</label>
+      <select id="food_complaint"><option>No</option><option>Yes</option></select>
+
+      <label>CBRE Complaint?</label>
+      <select id="cbre_complaint"><option>No</option><option>Yes</option></select>
+
+      <label>Cognizant Complaint?</label>
+      <select id="cognizant_complaint"><option>No</option><option>Yes</option></select>
+
+      <label>Remarks</label>
+      <textarea id="remarks" rows="2"></textarea>
     </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+      <button type="submit" class="button">Save Entry</button>
+      <button id="resetBtn" type="button" class="button secondary">Reset</button>
+    </div>
+  </form>
+</div>
+
+<!-- Summary + Filters -->
+<div class="card">
+  <div class="summary" id="summary"></div>
+
+  <div class="filters" style="margin-top:10px;">
+    <label>Stall</label>
+    <select id="filterStall"><option value="">All</option></select>
+
+    <label>From</label>
+    <input type="date" id="filterFrom">
+
+    <label>To</label>
+    <input type="date" id="filterTo">
+
+    <button id="applyFilter" class="button small">Apply</button>
+    <button id="clearFilter" class="button small secondary">Clear</button>
   </div>
+</div>
 
-  <!-- MAIN APP -->
-  <div id="appArea" style="display:none;">
+<!-- Chart -->
+<div class="card">
+  <h3>Average Score by Stall</h3>
+  <canvas id="chart" height="120"></canvas>
+</div>
 
-    <!-- Top controls -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="row">
-          <div><strong>Add / Edit Audit Entry</strong></div>
-        </div>
-
-        <div class="row">
-          <button id="btnExportCSV" class="button small">Export CSV</button>
-          <button id="btnExportPDF" class="button small">Export PDF</button>
-          <button id="btnClearAll" class="button small secondary">Clear All Local Data</button>
-        </div>
-      </div>
-
-      <div style="margin-top:12px" class="card">
-        <form id="entryForm">
-          <div class="form-grid">
-            <div>
-              <label>Stall</label>
-              <input id="stall" required placeholder="Stall name (e.g., Stall A)" />
-            </div>
-
-            <div>
-              <label>Date</label>
-              <input id="date" type="date" required />
-            </div>
-
-            <div>
-              <label>Timestamp (auto)</label>
-              <input id="timestamp" readonly />
-            </div>
-
-            <!-- Section Yes/No fields -->
-            <div>
-              <label>Daily sales report submitted?</label>
-              <select id="sales_sub"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Daily feedback report submitted?</label>
-              <select id="feedback_sub"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Breakfast on time (8:00)</label>
-              <select id="breakfast"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Lunch on time (12:30)</label>
-              <select id="lunch"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Dinner on time (20:00)</label>
-              <select id="dinner"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Temperature measured & photo posted?</label>
-              <select id="temp_photo"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Staff behaviour good?</label>
-              <select id="behaviour"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Staff hygiene good?</label>
-              <select id="hygiene"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Stall clean & hygienic?</label>
-              <select id="stall_clean"><option>Yes</option><option>No</option></select>
-            </div>
-
-            <div>
-              <label>Food quality complaints received?</label>
-              <select id="food_complaint"><option>No</option><option>Yes</option></select>
-            </div>
-
-            <div>
-              <label>CBRE complaint?</label>
-              <select id="cbre_complaint"><option>No</option><option>Yes</option></select>
-            </div>
-
-            <div>
-              <label>Cognizant complaint?</label>
-              <select id="cognizant_complaint"><option>No</option><option>Yes</option></select>
-            </div>
-
-            <div class="full">
-              <label>Remarks</label>
-              <textarea id="remarks" rows="2" placeholder="Optional comments"></textarea>
-            </div>
-
-            <div class="full" style="display:flex;gap:8px;justify-content:flex-end">
-              <input type="hidden" id="editId" />
-              <button type="submit" id="saveBtn" class="button">Save Entry</button>
-              <button type="button" id="resetBtn" class="button secondary">Reset</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Summary + Filters -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="summary-grid" id="summaryGrid"></div>
-
-        <div style="display:flex;gap:8px;align-items:center" class="filters">
-          <label>Filter Stall</label>
-          <select id="filterStall"><option value="">All</option></select>
-
-          <label>From</label>
-          <input id="filterFrom" type="date" />
-          <label>To</label>
-          <input id="filterTo" type="date" />
-
-          <button id="applyFilter" class="button small">Apply</button>
-          <button id="clearFilter" class="button small secondary">Clear</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chart and Table -->
-    <div class="card">
-      <h4>Average Score by Stall</h4>
-      <canvas id="barChart" height="100"></canvas>
-    </div>
-
-    <div class="card">
-      <h4>Entries</h4>
-      <div class="table-wrap">
-        <table id="entriesTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-
+<!-- Table -->
+<div class="card">
+  <h3>Audit Entries</h3>
+  <div class="table-wrap">
+    <table id="table">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
   </div>
-
-  <div class="footer">
-    Data is stored locally in your browser. Use Export buttons to download CSV or PDF for sharing/backup.
-  </div>
+</div>
 
 </main>
 
 <script>
-/* ============================
-  Simple Stall Audit App
-  - Firebase Auth (Email/Password)
-  - Data stored in localStorage
-  - Export CSV & PDF
-  ============================ */
+/* --------------------------
+       LOCALSTORAGE LOGIC
+---------------------------*/
+const KEY = "stall_audit";
 
-/* ---------- CONFIG ---------- */
-/* If you want to use your own Firebase project, replace below config.
-   Using Firebase is optional for authentication; localStorage holds the data.
-*/
-const firebaseConfig = {
-  apiKey: "AIzaSyBrGrJd91YpNI9yAr_WyVd9ib7HsR6CgXQ",
-  authDomain: "stall-audit-system.firebaseapp.com",
-  projectId: "stall-audit-system",
-  storageBucket: "stall-audit-system.firebasestorage.app",
-  messagingSenderId: "715828005214",
-  appId: "1:715828005214:web:f25b1924f4fa8ae0ba27cf"
+function loadData(){
+  return JSON.parse(localStorage.getItem(KEY) || "[]");
+}
+function saveData(arr){
+  localStorage.setItem(KEY, JSON.stringify(arr));
+}
+
+/* --------------------------
+       TIMESTAMP SET
+---------------------------*/
+function setTimestamp(){
+  const now = new Date();
+  timestamp.value = now.toISOString().slice(0,19).replace("T"," ");
+}
+setTimestamp();
+
+/* --------------------------
+       SCORING ENGINE
+---------------------------*/
+function yesNo(value, positive=true){
+  value = value.toUpperCase();
+  return value==="YES" ? (positive?10:0) : (positive?0:10);
+}
+function timeScore(a,b,c){
+  let t=[a,b,c].map(v=>v==="YES"?1:0);
+  return (t[0]+t[1]+t[2])/3 * 10;
+}
+function compute(entry){
+  let s1=yesNo(entry.sales_sub);
+  let s2=yesNo(entry.feedback_sub);
+  let s3=timeScore(entry.breakfast,entry.lunch,entry.dinner);
+  let s4=yesNo(entry.temp_photo);
+  let s5=yesNo(entry.behaviour);
+  let s6=yesNo(entry.hygiene);
+  let s7=yesNo(entry.stall_clean);
+  let s8=yesNo(entry.food_complaint,false);
+  let s9=yesNo(entry.cbre_complaint,false);
+  let s10=yesNo(entry.cognizant_complaint,false);
+  let total = s1+s2+s3+s4+s5+s6+s7+s8+s9+s10;
+  let rating = (total/100)*5;
+  return {score:total, rating:+rating.toFixed(2)};
+}
+
+/* --------------------------
+       SAVE ENTRY
+---------------------------*/
+entryForm.onsubmit = function(e){
+  e.preventDefault();
+
+  let entry = {
+    id: editId.value || "id"+Date.now(),
+    stall: stall.value.trim(),
+    date: date.value,
+    timestamp: timestamp.value,
+
+    sales_sub: sales_sub.value,
+    feedback_sub: feedback_sub.value,
+    breakfast: breakfast.value,
+    lunch: lunch.value,
+    dinner: dinner.value,
+    temp_photo: temp_photo.value,
+    behaviour: behaviour.value,
+    hygiene: hygiene.value,
+    stall_clean: stall_clean.value,
+    food_complaint: food_complaint.value,
+    cbre_complaint: cbre_complaint.value,
+    cognizant_complaint: cognizant_complaint.value,
+    remarks: remarks.value
+  };
+
+  let calc = compute(entry);
+  entry.total_score = calc.score;
+  entry.rating = calc.rating;
+
+  let data = loadData();
+  let i = data.findIndex(x=>x.id===entry.id);
+  if(i>=0) data[i]=entry; else data.push(entry);
+
+  saveData(data);
+  resetForm();
+  refresh();
 };
 
-/* ---------- INIT FIREBASE AUTH ---------- */
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+resetBtn.onclick = resetForm;
 
-/* ---------- DOM ---------- */
-const authArea = document.getElementById('authArea');
-const btnSignup = document.getElementById('btnSignup');
-const btnLogin = document.getElementById('btnLogin');
-const authCard = document.getElementById('authCard');
-const authTitle = document.getElementById('authTitle');
-const authEmail = document.getElementById('authEmail');
-const authPass  = document.getElementById('authPass');
-const authSubmit = document.getElementById('authSubmit');
-const authCancel = document.getElementById('authCancel');
-const authMsg = document.getElementById('authMsg');
-const userEmailSpan = document.getElementById('userEmail');
-
-const appArea = document.getElementById('appArea');
-const entryForm = document.getElementById('entryForm');
-const timestampField = document.getElementById('timestamp');
-const editIdField = document.getElementById('editId');
-const filterStall = document.getElementById('filterStall');
-const filterFrom = document.getElementById('filterFrom');
-const filterTo = document.getElementById('filterTo');
-const summaryGrid = document.getElementById('summaryGrid');
-const entriesTable = document.getElementById('entriesTable');
-const entriesTbody = entriesTable.querySelector('tbody');
-
-const btnExportCSV = document.getElementById('btnExportCSV');
-const btnExportPDF = document.getElementById('btnExportPDF');
-const btnClearAll = document.getElementById('btnClearAll');
-
-/* ---------- Local Storage Key ---------- */
-const STORAGE_KEY = 'stallAuditEntries_v1';
-
-/* ---------- Utility: load/save ---------- */
-function loadEntries() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch(e) { return []; }
-}
-function saveEntries(entries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-}
-
-/* ---------- Scoring logic (10 sections x10 each => 0-100) ---------- */
-function sectionYesNoScore(value, yesIsPositive=true){
-  // value: 'Yes' or 'No' or truthy; if yesIsPositive true, Yes=10 else Yes=0
-  const v = (''+value).trim().toUpperCase();
-  if (v === 'YES') return yesIsPositive ? 10 : 0;
-  if (v === 'NO') return yesIsPositive ? 0 : 10;
-  return 0;
-}
-
-function onTimeScore(breakfast, lunch, dinner) {
-  const b = (''+breakfast).trim().toUpperCase()==='YES'?1:0;
-  const l = (''+lunch).trim().toUpperCase()==='YES'?1:0;
-  const d = (''+dinner).trim().toUpperCase()==='YES'?1:0;
-  return ((b + l + d)/3)*10;
-}
-
-function computeTotalScore(entry){
-  // entry contains fields matching form ids
-  const s1 = sectionYesNoScore(entry.sales_sub, true);
-  const s2 = sectionYesNoScore(entry.feedback_sub, true);
-  const s3 = onTimeScore(entry.breakfast, entry.lunch, entry.dinner);
-  const s4 = sectionYesNoScore(entry.temp_photo, true);
-  const s5 = sectionYesNoScore(entry.behaviour, true);
-  const s6 = sectionYesNoScore(entry.hygiene, true);
-  const s7 = sectionYesNoScore(entry.stall_clean, true);
-  const s8 = sectionYesNoScore(entry.food_complaint, false); // No complaint = positive
-  const s9 = sectionYesNoScore(entry.cbre_complaint, false);
-  const s10= sectionYesNoScore(entry.cognizant_complaint, false);
-  const total = s1+s2+s3+s4+s5+s6+s7+s8+s9+s10;
-  const rating = +( (total/100)*5 ).toFixed(2);
-  return { total: Math.round(total*100)/100, rating };
-}
-
-/* ---------- Form handling ---------- */
-function setTimestampNow(){
-  const now = new Date();
-  const local = now.toISOString().slice(0,19).replace('T',' ');
-  timestampField.value = local;
-}
-setTimestampNow();
-document.getElementById('date').valueAsNumber = Date.now(); // today's date
-
-document.getElementById('resetBtn').addEventListener('click', e=>{
-  e.preventDefault();
+function resetForm(){
   entryForm.reset();
-  setTimestampNow();
-  editIdField.value = '';
-});
+  editId.value="";
+  setTimestamp();
+}
 
-entryForm.addEventListener('submit', e=>{
-  e.preventDefault();
-  const form = new FormData(entryForm);
-  const entry = {
-    id: editIdField.value || ('id_' + Date.now()),
-    timestamp: form.get('timestamp') || (new Date()).toISOString(),
-    stall: form.get('stall') || '',
-    date: form.get('date') || '',
-    sales_sub: form.get('sales_sub'),
-    feedback_sub: form.get('feedback_sub'),
-    breakfast: form.get('breakfast'),
-    lunch: form.get('lunch'),
-    dinner: form.get('dinner'),
-    temp_photo: form.get('temp_photo'),
-    behaviour: form.get('behaviour'),
-    hygiene: form.get('hygiene'),
-    stall_clean: form.get('stall_clean'),
-    food_complaint: form.get('food_complaint'),
-    cbre_complaint: form.get('cbre_complaint'),
-    cognizant_complaint: form.get('cognizant_complaint'),
-    remarks: form.get('remarks') || ''
-  };
-  const scoreObj = computeTotalScore(entry);
-  entry.total_score = scoreObj.total;
-  entry.rating_0_5 = scoreObj.rating;
-
-  const entries = loadEntries();
-  const idx = entries.findIndex(x=>x.id===entry.id);
-  if (idx>=0) entries[idx]=entry; else entries.push(entry);
-  saveEntries(entries);
-  entryForm.reset(); setTimestampNow(); editIdField.value='';
-  refreshUI();
-});
-
-/* ---------- Edit / Delete ---------- */
+/* --------------------------
+       EDIT / DELETE
+---------------------------*/
 function editEntry(id){
-  const entries = loadEntries();
-  const e = entries.find(x=>x.id===id);
-  if (!e) return;
-  document.getElementById('stall').value = e.stall;
-  document.getElementById('date').value = e.date;
-  document.getElementById('timestamp').value = e.timestamp;
-  document.getElementById('sales_sub').value = e.sales_sub;
-  document.getElementById('feedback_sub').value = e.feedback_sub;
-  document.getElementById('breakfast').value = e.breakfast;
-  document.getElementById('lunch').value = e.lunch;
-  document.getElementById('dinner').value = e.dinner;
-  document.getElementById('temp_photo').value = e.temp_photo;
-  document.getElementById('behaviour').value = e.behaviour;
-  document.getElementById('hygiene').value = e.hygiene;
-  document.getElementById('stall_clean').value = e.stall_clean;
-  document.getElementById('food_complaint').value = e.food_complaint;
-  document.getElementById('cbre_complaint').value = e.cbre_complaint;
-  document.getElementById('cognizant_complaint').value = e.cognizant_complaint;
-  document.getElementById('remarks').value = e.remarks;
-  editIdField.value = e.id;
+  let data = loadData();
+  let e = data.find(x=>x.id===id);
+  if(!e) return;
+
+  editId.value = e.id;
+  stall.value = e.stall;
+  date.value = e.date;
+  timestamp.value = e.timestamp;
+  sales_sub.value = e.sales_sub;
+  feedback_sub.value = e.feedback_sub;
+  breakfast.value = e.breakfast;
+  lunch.value = e.lunch;
+  dinner.value = e.dinner;
+  temp_photo.value = e.temp_photo;
+  behaviour.value = e.behaviour;
+  hygiene.value = e.hygiene;
+  stall_clean.value = e.stall_clean;
+  food_complaint.value = e.food_complaint;
+  cbre_complaint.value = e.cbre_complaint;
+  cognizant_complaint.value = e.cognizant_complaint;
+  remarks.value = e.remarks;
+
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function deleteEntry(id){
-  if (!confirm('Delete this entry?')) return;
-  let entries = loadEntries();
-  entries = entries.filter(x=>x.id!==id);
-  saveEntries(entries);
-  refreshUI();
+  if(!confirm("Delete this record?")) return;
+  let data = loadData().filter(x=>x.id!==id);
+  saveData(data);
+  refresh();
 }
 
-/* ---------- Filters & UI ---------- */
-function getUniqueStalls(entries){
-  const s = new Set(entries.map(e=>e.stall).filter(Boolean));
-  return Array.from(s).sort();
+/* --------------------------
+       FILTER LOGIC
+---------------------------*/
+function applyFilters(data){
+  let s = filterStall.value;
+  let f = filterFrom.value;
+  let t = filterTo.value;
+
+  return data.filter(e=>{
+    if(s && e.stall!==s) return false;
+    if(f && e.date < f) return false;
+    if(t && e.date > t) return false;
+    return true;
+  });
 }
 
-function applyFilters(entries){
-  const stall = filterStall.value;
-  const from = filterFrom.value;
-  const to = filterTo.value;
-  let out = entries.slice();
-  if (stall) out = out.filter(e=>e.stall===stall);
-  if (from) out = out.filter(e=>e.date >= from);
-  if (to) out = out.filter(e=>e.date <= to);
-  return out;
+applyFilter.onclick = refresh;
+clearFilter.onclick = ()=>{
+  filterStall.value="";
+  filterFrom.value="";
+  filterTo.value="";
+  refresh();
+};
+
+/* --------------------------
+       RENDER SUMMARY
+---------------------------*/
+function renderSummary(data){
+  if(!data.length){
+    summary.innerHTML = "<div class='box'>No records found</div>";
+    return;
+  }
+
+  let avg = data.reduce((a,b)=>a+b.total_score,0)/data.length;
+  let max = Math.max(...data.map(e=>e.total_score));
+  let min = Math.min(...data.map(e=>e.total_score));
+  let best = data.find(e=>e.total_score===max)?.stall || "-";
+  let worst = data.find(e=>e.total_score===min)?.stall || "-";
+
+  summary.innerHTML = `
+    <div class="box"><b>${data.length}</b><br>Records</div>
+    <div class="box"><b>${avg.toFixed(2)}</b><br>Avg Score</div>
+    <div class="box"><b>${best}</b><br>Best Stall</div>
+    <div class="box"><b>${worst}</b><br>Worst Stall</div>
+  `;
 }
 
-function refreshUI(){
-  const all = loadEntries();
-  // populate filter stall select
-  const stalls = getUniqueStalls(all);
-  filterStall.innerHTML = '<option value="">All</option>' + stalls.map(s=>`<option>${s}</option>`).join('');
+/* --------------------------
+       RENDER TABLE
+---------------------------*/
+function renderTable(data){
+  const thead = table.querySelector("thead");
+  const tbody = table.querySelector("tbody");
+  thead.innerHTML="";
+  tbody.innerHTML="";
 
-  // compute summary
-  const filtered = applyFilters(all);
+  const cols = ["timestamp","stall","date","total_score","rating",
+    "sales_sub","feedback_sub","breakfast","lunch","dinner","temp_photo",
+    "behaviour","hygiene","stall_clean","food_complaint","cbre_complaint","cognizant_complaint","remarks"
+  ];
+
+  // header
+  let tr=document.createElement("tr");
+  cols.concat("actions").forEach(c=>{
+    let th=document.createElement("th"); th.textContent=c.replace(/_/g," ");
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+
+  // rows
+  data.slice().reverse().forEach(e=>{
+    let tr=document.createElement("tr");
+    cols.forEach(c=>{
+      let td=document.createElement("td"); td.textContent=e[c] ?? "";
+      tr.appendChild(td);
+    });
+    let td=document.createElement("td");
+    td.innerHTML=`
+      <button class="button small" onclick="editEntry('${e.id}')">Edit</button>
+      <button class="button small secondary" onclick="deleteEntry('${e.id}')">Del</button>
+    `;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+}
+
+/* --------------------------
+       CHART RENDER
+---------------------------*/
+let chartInstance=null;
+function renderChart(data){
+  let map={};
+  data.forEach(e=>{
+    if(!map[e.stall]) map[e.stall]=[];
+    map[e.stall].push(e.total_score);
+  });
+
+  let labels = Object.keys(map);
+  let vals = labels.map(s=>{
+    let a=map[s]; return (a.reduce((x,y)=>x+y,0)/a.length).toFixed(2);
+  });
+
+  if(chartInstance) chartInstance.destroy();
+
+  const ctx=document.getElementById("chart").getContext("2d");
+  chartInstance=new Chart(ctx,{
+    type:"bar",
+    data:{labels,datasets:[{label:"Avg Score",data:vals,backgroundColor:"rgba(31,113,255,0.7)"}]},
+    options:{scales:{y:{beginAtZero:true,max:100}}}
+  });
+}
+
+/* --------------------------
+       EXPORT CSV
+---------------------------*/
+exportCSV.onclick = ()=>{
+  let data = applyFilters(loadData());
+  if(!data.length){ alert("No data"); return; }
+
+  let headers = Object.keys(data[0]);
+  let csv = [headers.join(",")];
+
+  data.forEach(e=>{
+    csv.push(headers.map(h=>JSON.stringify(e[h]??"")).join(","));
+  });
+
+  let blob=new Blob([csv.join("\n")],{type:"text/csv"});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement("a");
+  a.href=url; a.download="stall_audit.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* --------------------------
+       EXPORT PDF
+---------------------------*/
+exportPDF.onclick=async ()=>{
+  let data = applyFilters(loadData());
+  if(!data.length){ alert("No data"); return; }
+
+  // Create print view
+  const w=window.open("","_blank");
+  w.document.write("<h2>Stall Audit Export</h2><table border='1' cellspacing='0' cellpadding='6'><thead><tr>");
+
+  let headers=Object.keys(data[0]);
+  headers.forEach(h=>w.document.write("<th>"+h+"</th>"));
+  w.document.write("</tr></thead><tbody>");
+
+  data.forEach(e=>{
+    w.document.write("<tr>");
+    headers.forEach(h=>w.document.write("<td>"+(e[h]??"")+"</td>"));
+    w.document.write("</tr>");
+  });
+  w.document.write("</tbody></table>");
+  w.document.close();
+
+  // Convert to PDF
+  const canvas = await html2canvas(w.document.body,{scale:1});
+  const img = canvas.toDataURL("image/png");
+  const pdf = new jspdf.jsPDF("p","mm","a4");
+  const wPdf = pdf.internal.pageSize.getWidth()-20;
+  const hPdf = (canvas.height * wPdf) / canvas.width;
+  pdf.addImage(img,"PNG",10,10,wPdf,hPdf);
+  pdf.save("stall_audit.pdf");
+  w.close();
+};
+
+/* --------------------------
+       CLEAR ALL
+---------------------------*/
+clearAll.onclick = ()=>{
+  if(confirm("Clear all records?")){ localStorage.removeItem(KEY); refresh(); }
+}
+
+/* --------------------------
+       REFRESH UI
+---------------------------*/
+function refresh(){
+  let data = loadData();
+  let stalls=[...new Set(data.map(e=>e.stall))];
+  filterStall.innerHTML="<option value=''>All</option>"+stalls.map(s=>`<option>${s}</option>`).join("");
+
+  let filtered = applyFilters(data);
   renderSummary(filtered);
   renderTable(filtered);
   renderChart(filtered);
 }
 
-/* ---------- Render summary ---------- */
-function renderSummary(entries){
-  const totalRecords = entries.length;
-  const avg = (entries.reduce((a,b)=>a + (Number(b.total_score)||0), 0) / (entries.length || 1)).toFixed(2);
-  let best = '-', worst='-';
-  if (entries.length){
-    const max = Math.max(...entries.map(e=>e.total_score||0));
-    const min = Math.min(...entries.map(e=>e.total_score||0));
-    best = entries.find(e=>e.total_score==max)?.stall || '-';
-    worst= entries.find(e=>e.total_score==min)?.stall || '-';
-  }
-  summaryGrid.innerHTML = `
-    <div class="summary-card"><div style="font-size:20px">${totalRecords}</div><div class="muted">Records</div></div>
-    <div class="summary-card"><div style="font-size:20px">${avg}</div><div class="muted">Avg Score</div></div>
-    <div class="summary-card"><div style="font-size:20px">${best}</div><div class="muted">Best Stall</div></div>
-    <div class="summary-card"><div style="font-size:20px">${worst}</div><div class="muted">Worst Stall</div></div>
-  `;
-}
-
-/* ---------- Render table ---------- */
-function renderTable(entries){
-  const thead = entriesTable.querySelector('thead');
-  const tbody = entriesTable.querySelector('tbody');
-  thead.innerHTML = '';
-  tbody.innerHTML = '';
-
-  const cols = ["timestamp","stall","date","total_score","rating_0_5","sales_sub","feedback_sub","breakfast","lunch","dinner","temp_photo","behaviour","hygiene","stall_clean","food_complaint","cbre_complaint","cognizant_complaint","remarks","actions"];
-  const trh = document.createElement('tr');
-  const labels = ["Timestamp","Stall","Date","Score","Rating","Sales","Feedback","B","L","D","TempPosted","Behaviour","Hygiene","Clean","FoodCompl","CBRE","Cognizant","Remarks","Actions"];
-  labels.forEach(l=>{
-    const th = document.createElement('th'); th.textContent=l; trh.appendChild(th);
-  });
-  thead.appendChild(trh);
-
-  entries.slice().reverse().forEach(e=>{
-    const tr = document.createElement('tr');
-    cols.forEach(c=>{
-      const td = document.createElement('td');
-      if (c==='actions'){
-        td.className='actions';
-        const btnE = document.createElement('button'); btnE.textContent='Edit'; btnE.className='button small';
-        btnE.addEventListener('click',()=>editEntry(e.id));
-        const btnD = document.createElement('button'); btnD.textContent='Delete'; btnD.className='button small secondary';
-        btnD.addEventListener('click',()=>deleteEntry(e.id));
-        td.appendChild(btnE); td.appendChild(btnD);
-      } else {
-        td.textContent = e[c] ?? '';
-      }
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-}
-
-/* ---------- Chart ---------- */
-let barChart = null;
-function renderChart(entries){
-  // group by stall average score
-  const map = {};
-  entries.forEach(e=>{
-    const s = e.stall || 'Unknown';
-    const v = Number(e.total_score || 0);
-    if (!map[s]) map[s] = {sum:0,count:0};
-    map[s].sum += v; map[s].count++;
-  });
-  const labels = Object.keys(map);
-  const data = labels.map(l => +(map[l].sum / map[l].count).toFixed(2));
-
-  const ctx = document.getElementById('barChart').getContext('2d');
-  if (barChart) barChart.destroy();
-  barChart = new Chart(ctx, {
-    type:'bar',
-    data:{ labels, datasets:[{ label:'Avg Score', data, backgroundColor:'rgba(31,113,255,0.7)' }]},
-    options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
-  });
-}
-
-/* ---------- Export CSV ---------- */
-function exportCSV(entries){
-  if (!entries.length){ alert('No data'); return; }
-  const headers = ["id","timestamp","stall","date","total_score","rating_0_5","sales_sub","feedback_sub","breakfast","lunch","dinner","temp_photo","behaviour","hygiene","stall_clean","food_complaint","cbre_complaint","cognizant_complaint","remarks"];
-  const lines = [headers.join(',')];
-  entries.forEach(e=>{
-    const row = headers.map(h => {
-      let val = e[h] ?? '';
-      val = (''+val).replace(/"/g, '""');
-      return `"${val}"`;
-    }).join(',');
-    lines.push(row);
-  });
-  const csv = lines.join('\n');
-  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download = 'stall_audit_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-/* ---------- Export PDF (table snapshot) ---------- */
-async function exportPDF(entries){
-  // create a temporary table element in DOM for printing
-  const w = window.open('', '_blank');
-  const doc = w.document;
-  doc.write('<html><head><title>Stall Audit Export</title></head><body>');
-  doc.write('<h2>Stall Audit Export</h2>');
-  doc.write('<table border="1" cellpadding="6" cellspacing="0">');
-  doc.write('<thead><tr>');
-  const headers = ["Timestamp","Stall","Date","Score","Rating","Sales","Feedback","B","L","D","TempPosted","Behaviour","Hygiene","Clean","FoodCompl","CBRE","Cognizant","Remarks"];
-  headers.forEach(h=>doc.write('<th>'+h+'</th>'));
-  doc.write('</tr></thead><tbody>');
-  entries.forEach(e=>{
-    doc.write('<tr>');
-    doc.write(`<td>${e.timestamp||''}</td>`);
-    doc.write(`<td>${e.stall||''}</td>`);
-    doc.write(`<td>${e.date||''}</td>`);
-    doc.write(`<td>${e.total_score||''}</td>`);
-    doc.write(`<td>${e.rating_0_5||''}</td>`);
-    doc.write(`<td>${e.sales_sub||''}</td>`);
-    doc.write(`<td>${e.feedback_sub||''}</td>`);
-    doc.write(`<td>${e.breakfast||''}</td>`);
-    doc.write(`<td>${e.lunch||''}</td>`);
-    doc.write(`<td>${e.dinner||''}</td>`);
-    doc.write(`<td>${e.temp_photo||''}</td>`);
-    doc.write(`<td>${e.behaviour||''}</td>`);
-    doc.write(`<td>${e.hygiene||''}</td>`);
-    doc.write(`<td>${e.stall_clean||''}</td>`);
-    doc.write(`<td>${e.food_complaint||''}</td>`);
-    doc.write(`<td>${e.cbre_complaint||''}</td>`);
-    doc.write(`<td>${e.cognizant_complaint||''}</td>`);
-    doc.write(`<td>${(e.remarks||'').replace(/</g,'&lt;')}</td>`);
-    doc.write('</tr>');
-  });
-  doc.write('</tbody></table></body></html>');
-  doc.close();
-
-  // use html2canvas + jsPDF on newly opened window content
-  try {
-    const canvas = await html2canvas(doc.body, {scale:1});
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jspdf.jsPDF('p','mm','a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData,'PNG',10,10,pdfWidth,pdfHeight);
-    pdf.save('stall_audit_export.pdf');
-    w.close();
-  } catch(err){
-    w.close();
-    alert('PDF export failed: '+err.message);
-  }
-}
-
-/* ---------- Clear all local data ---------- */
-btnClearAll.addEventListener('click', ()=>{
-  if (!confirm('Clear all stored entries? This cannot be undone.')) return;
-  localStorage.removeItem(STORAGE_KEY);
-  refreshUI();
-});
-
-/* ---------- Filter buttons ---------- */
-document.getElementById('applyFilter').addEventListener('click', refreshUI);
-document.getElementById('clearFilter').addEventListener('click', ()=>{
-  filterStall.value=''; filterFrom.value=''; filterTo.value=''; refreshUI();
-});
-
-/* ---------- Export buttons ---------- */
-btnExportCSV.addEventListener('click', () => {
-  const entries = applyFilters(loadEntries());
-  exportCSV(entries);
-});
-btnExportPDF.addEventListener('click', () => {
-  const entries = applyFilters(loadEntries());
-  exportPDF(entries);
-});
-
-/* ---------- Auth UI handlers ---------- */
-btnSignup.addEventListener('click', ()=>{ openAuthCard('signup'); });
-btnLogin.addEventListener('click', ()=>{ openAuthCard('login'); });
-authCancel.addEventListener('click', ()=>{ authCard.style.display='none'; authMsg.textContent=''; });
-
-function openAuthCard(mode){
-  authCard.style.display='block';
-  authTitle.textContent = mode==='signup' ? 'Sign up' : 'Sign in';
-  authSubmit.textContent = mode==='signup' ? 'Create account' : 'Sign in';
-  authMsg.textContent = '';
-  authCard.dataset.mode = mode;
-}
-
-authSubmit.addEventListener('click', async ()=>{
-  const mode = authCard.dataset.mode;
-  const email = authEmail.value.trim();
-  const pass = authPass.value;
-  authMsg.textContent = '';
-  if (!email || !pass){ authMsg.textContent='Enter email & password'; return; }
-  try {
-    if (mode==='signup'){
-      await auth.createUserWithEmailAndPassword(email, pass);
-    } else {
-      await auth.signInWithEmailAndPassword(email, pass);
-    }
-    authCard.style.display='none';
-    authEmail.value=''; authPass.value='';
-  } catch(err){
-    authMsg.textContent = err.message;
-  }
-});
-
-/* ---------- Auth state update ---------- */
-auth.onAuthStateChanged(user=>{
-  if (user){
-    userEmailSpan.textContent = user.email;
-    btnSignup.style.display='none';
-    btnLogin.style.display='none';
-    appArea.style.display='block';
-    authCard.style.display='none';
-    refreshUI();
-  } else {
-    userEmailSpan.textContent = '';
-    btnSignup.style.display='inline-block';
-    btnLogin.style.display='inline-block';
-    appArea.style.display='none';
-  }
-});
-
-/* ---------- Initial load ---------- */
-refreshUI();
+refresh();
 
 </script>
+
 </body>
 </html>
