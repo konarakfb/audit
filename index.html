@@ -1,1 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stall Audit System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- FIREBASE (CDN, NO IMPORTS) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+
+<style>
+/* ---------- BASIC STYLES ---------- */
+body { font-family: Arial, sans-serif; margin:0; background:#f4f6f8; }
+.center { display:flex; justify-content:center; align-items:center; height:90vh; }
+.card { background:#fff; padding:20px; border-radius:8px; width:350px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+input { width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:5px; }
+.btn { background:#1f71ff; color:white; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; width:100%; }
+.btn.small { width:auto; padding:6px 10px; font-size:0.9rem; }
+.btn.outline { background:white; color:#1f71ff; border:1px solid #1f71ff; }
+.topbar { background:white; border-bottom:1px solid #ddd; padding:10px 0; }
+.topbar .row { max-width:1100px; margin:auto; display:flex; justify-content:space-between; align-items:center; }
+.container { max-width:1100px; margin:20px auto; }
+.table-wrap { max-height:400px; overflow:auto; }
+table { width:100%; border-collapse:collapse; }
+th { position:sticky; top:0; background:white; padding:8px; border-bottom:2px solid #eee; }
+td { padding:8px; border-bottom:1px solid #eee; }
+.summary-box { display:flex; gap:10px; flex-wrap:wrap; }
+.box { background:white; padding:12px; border-radius:6px; flex:1 1 200px; text-align:center; }
+.error { color:red; margin-top:10px; }
+</style>
+
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="center">
+  <div class="card">
+    <h2>Stall Audit Login</h2>
+
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button id="loginBtn" class="btn">Login</button>
+
+    <p id="msg" class="error"></p>
+  </div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div id="dashScreen" style="display:none;">
+
+  <header class="topbar">
+    <div class="row">
+      <h2>Dashboard</h2>
+      <div>
+        <button id="refreshBtn" class="btn small">Refresh</button>
+        <button id="logoutBtn" class="btn small outline">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="summary" class="box">Loading...</div>
+
+    <div class="card">
+      <h3>Average Score per Stall</h3>
+      <canvas id="scoreChart" height="120"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Latest Audit Entries</h3>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+/* ---------- FIREBASE CONFIG ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyBrGrJd91YpNI9yAr_WyVd9ib7HsR6CgXQ",
+  authDomain: "stall-audit-system.firebaseapp.com",
+  projectId: "stall-audit-system",
+  storageBucket: "stall-audit-system.firebasestorage.app",
+  messagingSenderId: "715828005214",
+  appId: "1:715828005214:web:f25b1924f4fa8ae0ba27cf"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+/* ---------- GOOGLE SHEET API URL ---------- */
+const API_URL =
+"https://sheets.googleapis.com/v4/spreadsheets/1dRTgxrmlwdxJiTksdOsbQZsJDLAAsdOBTPYoJZI2dmE/values/Responses!A1:AD?key=AIzaSyCrUuwHSDdz8TISG8Z_rTxUQfj0hnZji68";
+
+/* ---------- LOGIN LOGIC ---------- */
+document.getElementById("loginBtn").onclick = () => {
+  const email = document.getElementById("email").value.trim();
+  const pass  = document.getElementById("password").value;
+  const msg   = document.getElementById("msg");
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(err => msg.textContent = err.message);
+};
+
+/* ---------- AUTH STATE HANDLER ---------- */
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("dashScreen").style.display = "block";
+    loadDashboard();
+  } else {
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("dashScreen").style.display = "none";
+  }
+});
+
+/* ---------- LOGOUT ---------- */
+document.getElementById("logoutBtn").onclick = () => auth.signOut();
+
+/* ---------- DASHBOARD LOADING ---------- */
+let chart = null;
+
+async function loadDashboard() {
+  const summary = document.getElementById("summary");
+  summary.innerHTML = "Loading data...";
+
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+    if (!json.values) {
+      summary.innerHTML = "<b>API blocked or empty. Fix API Key restrictions.</b>";
+      return;
+    }
+
+    const rows = json.values;
+    const headers = rows[0];
+    const objects = rows.slice(1).map(r => {
+      const o = {};
+      headers.forEach((h,i)=>o[h]=r[i]||"");
+      return o;
+    });
+
+    renderSummary(objects);
+    renderTable(objects);
+    renderChart(objects);
+
+  } catch (e) {
+    summary.innerHTML = "Error: " + e.message;
+  }
+}
+
+document.getElementById("refreshBtn").onclick = loadDashboard;
+
+/* ---------- SUMMARY ---------- */
+function renderSummary(data){
+  const scores = data.map(o => Number(o["Total_Score_100"]||0));
+  const stalls = data.map(o => o["Stall"]);
+
+  const avg = (scores.reduce((a,b)=>a+b,0) / scores.length).toFixed(2);
+  summary.innerHTML = `
+  <div class="summary-box">
+    <div class="box"><b>Total Records</b><br>${scores.length}</div>
+    <div class="box"><b>Average Score</b><br>${avg}</div>
+    <div class="box"><b>Best Stall</b><br>${stalls[scores.indexOf(Math.max(...scores))]}</div>
+    <div class="box"><b>Worst Stall</b><br>${stalls[scores.indexOf(Math.min(...scores))]}</div>
+  </div>`;
+}
+
+/* ---------- TABLE ---------- */
+function renderTable(data){
+  const tableHead = document.querySelector("#dataTable thead");
+  const tableBody = document.querySelector("#dataTable tbody");
+  tableHead.innerHTML="";
+  tableBody.innerHTML="";
+
+  const visible = [
+    "Timestamp","Stall","Date","Total_Score_100","Rating_0_5","Stars",
+    "Sales_Submitted","Feedback_Submitted",
+    "Breakfast_OnTime","Lunch_OnTime","Dinner_OnTime",
+    "Temp_Photo_Posted","Staff_Behaviour","Staff_Hygiene","Stall_Clean",
+    "FoodQuality_Complaint","CBRE_Complaint","Cognizant_Complaint","Remarks"
+  ];
+
+  let tr=document.createElement("tr");
+  visible.forEach(h=>{
+    let th=document.createElement("th");
+    th.textContent=h;
+    tr.appendChild(th);
+  });
+  tableHead.appendChild(tr);
+
+  data.slice().reverse().slice(0,150).forEach(o=>{
+    let tr=document.createElement("tr");
+    visible.forEach(h=>{
+      let td=document.createElement("td");
+      td.textContent=o[h]||"";
+      tr.appendChild(td);
+    });
+    tableBody.appendChild(tr);
+  });
+}
+
+/* ---------- CHART ---------- */
+function renderChart(data){
+  const ctx=document.getElementById("scoreChart").getContext("2d");
+  const stallMap={};
+
+  data.forEach(o=>{
+    let s=o["Stall"];
+    let score=Number(o["Total_Score_100"]||0);
+    if(!stallMap[s]) stallMap[s]={sum:0,count:0};
+    stallMap[s].sum+=score;
+    stallMap[s].count++;
+  });
+
+  const labels=Object.keys(stallMap);
+  const values=labels.map(s=>(stallMap[s].sum/stallMap[s].count).toFixed(2));
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{ labels, datasets:[{ label:"Avg Score", data:values, backgroundColor:"rgba(31,113,255,0.6)" }]},
+    options:{ scales:{ y:{beginAtZero:true, max:100}} }
+  });
+}
+</script>
+
+</body>
+</html>
