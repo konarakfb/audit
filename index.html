@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Konarak — Stall Audit (Final Variant B Only)</title>
+<title>Konarak — Stall Audit (Final)</title>
 
 <!-- html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -12,6 +12,8 @@
 :root{
   --bg1: linear-gradient(135deg,#eef2f3,#d9e4f5);
   --card:#ffffff;
+  --muted:#6b7280;
+  --accent:#0f172a;
   --shadow: 0 10px 30px rgba(2,6,23,0.12);
 }
 *{box-sizing:border-box}
@@ -25,74 +27,39 @@ body{
 /* Header */
 .header{
   height:64px;background:#0b1220;color:#fff;display:flex;align-items:center;
-  justify-content:space-between;padding:0 20px;
+  justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:40;
 }
-.header .brand{
-  display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px
-}
-.header .brand img{
-  height:36px;width:36px;background:#fff;border-radius:6px;padding:3px
-}
+.header .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+.header .brand img{height:36px;width:36px;background:#fff;border-radius:6px;padding:3px}
 
 .container{max-width:1200px;margin:28px auto;padding:0 18px;}
-.location-card{
-  background:var(--card);padding:14px;border-radius:12px;display:flex;
-  gap:12px;align-items:center;box-shadow:var(--shadow)
-}
-.location-card input{
-  padding:8px 10px;border-radius:8px;border:1px solid #e6eefc;
-}
+.location-card{background:var(--card);padding:14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
+.location-card input{padding:8px 10px;border-radius:8px;border:1px solid #e6eefc;}
 
-.btn{
-  background:#1665ff;color:#fff;border:none;padding:10px 14px;border-radius:10px;
-  cursor:pointer;font-weight:600
-}
-.btn.ghost{
-  background:transparent;color:#0b1220;border:1px solid #e6eefc
-}
+/* Buttons */
+.btn{background:#1665ff;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn.ghost{background:transparent;color:#0b1220;border:1px solid #e6eefc}
 .small{padding:7px 10px;font-size:13px}
 
 /* Question cards */
-.grid{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-  gap:18px;margin-top:18px
-}
-.qcard{
-  background:white;padding:18px;border-radius:16px;
-  box-shadow:0 12px 30px rgba(0,0,0,0.06)
-}
-select.form-control{
-  width:100%;padding:10px;border-radius:10px;border:1px solid #eef3fb;
-  background:#fff;font-size:14px
-}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:18px}
+.qcard{background:white;padding:18px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.06)}
+select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid #eef3fb;background:#fff;font-size:14px}
 
 /* Summary panel */
-.summary-panel{
-  display:flex;gap:18px;background:white;padding:14px;border-radius:12px;
-  box-shadow:var(--shadow)
-}
+.summary-panel{display:flex;gap:18px;background:white;padding:14px;border-radius:12px;box-shadow:var(--shadow)}
 .summary-item .num{font-size:18px;font-weight:700}
 
 /* Actions */
-.actions-card{
-  width:300px;background:white;padding:16px;border-radius:12px;
-  box-shadow:var(--shadow)
-}
+.actions-card{width:300px;background:white;padding:16px;border-radius:12px;box-shadow:var(--shadow)}
 
 /* Saved entries */
-.table-card{
-  margin-top:20px;background:white;padding:16px;border-radius:12px;
-  box-shadow:var(--shadow)
-}
+.table-card{margin-top:20px;background:white;padding:16px;border-radius:12px;box-shadow:var(--shadow)}
 
-/* Hidden render area */
-#renderArea{
-  position:fixed;top:0;left:0;width:1080px;height:1920px;
-  opacity:0;pointer-events:none;z-index:-1;
-}
+/* Render area (hidden) */
+#renderArea{position:fixed;top:0;left:0;width:1080px;height:1920px;opacity:0;pointer-events:none;z-index:-1;}
 </style>
 </head>
-
 <body>
 
 <div class="header">
@@ -109,7 +76,7 @@ select.form-control{
   <div class="location-card">
     <div><label>Building</label><br><input id="building" placeholder="Building"></div>
     <div><label>Floor</label><br><input id="floor" placeholder="Floor"></div>
-    <div><label>Counter</label><br><input id="counter" placeholder="Counter"></div>
+    <div><label>Counter</label><br><input id="counter" placeholder="Stall / Counter"></div>
     <div><label>Date</label><br><input type="date" id="date"></div>
     <div><button id="btnReset" class="btn ghost small">Reset</button></div>
   </div>
@@ -159,16 +126,16 @@ select.form-control{
 
 <!-- Hidden render area -->
 <div id="renderArea"></div>
-<!-- ================================ -->
-<!-- OFFLINE QR ENGINE (html2canvas safe) -->
-<!-- ================================ -->
-<script>
-/* qrcode.js – lightweight full QR generator (MIT) */
-var QRCode;!function(o){function t(o){this.mode=u.MODE_8BIT_BYTE,this.data=o}function e(o,t){this.typeNumber=o,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function r(t,e){if(void 0===t.length)throw new Error(t.length+"/"+e);for(var r=0,n=0;n<t.length&&r<e;)r+=t[n].length,n++;if(r!=e)throw new Error(r+"/"+e)}function n(o,t){this.totalCount=o,this.dataCount=t}function i(){for(var o=0,t=0,e=arguments.length;t<e;t++)o+=arguments[t].byteLength;var r=new Uint8Array(o),n=0;for(t=0;t<e;t++)r.set(arguments[t],n),n+=arguments[t].byteLength;return r}function u(){}function f(o,t){var e=o<<8|t;return e}function a(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}function h(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}t.prototype={getLength:function(){return this.data.length},write:function(o){for(var t=0,e=this.data.length;t<e;t++)o.put(this.data.charCodeAt(t),8)}},e.prototype={addData:function(o){var r=new t(o);this.dataList.push(r),this.dataCache=null},isDark:function(o,t){if(0>o||this.moduleCount<=o||0>t||this.moduleCount<=t)throw new Error(o+","+t);return this.modules[o][t]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1)},makeImpl:function(o){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var t=0,e=this.moduleCount;t<e;t++){this.modules[t]=new Array(this.moduleCount);for(var r=0;r<e;r++)this.modules[t][r]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.dataCache=this.createData(),this.mapData(this.dataCache,o)},setupPositionProbePattern:function(o,t){for(var e=-1;7>=e;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;7>=r;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=e>=0&&6>=e&&(0==r||6==r)||r>=0&&6>=r&&(0==e||6==e)||e>=2&&4>=e&&r>=2&&4>=r?!0:!1)},setupTimingPattern:function(){for(var o=8,t=this.moduleCount-8,e=0;e<this.moduleCount-8;e++)null==this.modules[e][6]&&(this.modules[e][6]=e%2==0),null==this.modules[6][e]&&(this.modules[6][e]=e%2==0)},setupPositionAdjustPattern:function(){for(var o=u.getPatternPosition(this.typeNumber),t=0,e=o.length;t<e;t++)for(var r=0;r<e;r++){var n=o[t],i=o[r];if(null==this.modules[n][i])for(var f=-2;2>=f;f++)for(var a=-2;2>=a;a++)this.modules[n+f][i+a]=-2==f||2==f||-2==a||2==a||0==f&&0==a?!0:!1}},mapData:function(o,t){for(var e=-1,r=this.moduleCount-1,n=7,i=this.moduleCount-1;i>0;i-=2)for(6==i&&i--;;){for(var f=0;2>f;f++){if(null==this.modules[i-f][r]){var a=!1;o.length>e+1&&(a=((o[++e]>>>n)&1)==1),this.modules[i-f][r]=a}if(--n<0&&(n=7),0==f&&--r<0)return}if(0>i)break}},createData:function(){var o=new Array,n=0;this.dataList.forEach(function(t){n+=t.getLength()}),r(this.dataList,n);for(var i=new Array(n),u=0,f=0;f<this.dataList.length;f++)for(var a=this.dataList[f],h=0;h<a.getLength();h++)i[u++]=a.data.charCodeAt(h);return i}},n.getRSBlocks=function(o,t){return[new n(26,9)]},u.MODE_NUMBER=1,u.MODE_ALPHA_NUM=2,u.MODE_8BIT_BYTE=4,u.MODE_KANJI=8,u.getPatternPosition=function(o){return[]},u.getErrorCorrectPolynomial=function(o){return[]},u.getLengthInBits=function(){return[]},u.getLostPoint=function(){return 0},o.QRCode=e}(this);
 
-/* Render QR to canvas (white background, black modules) */
+<!-- ==========================
+     WORKING OFFLINE QR LIBRARY
+     ========================== -->
+<script>
+/* Fully working QR generator (compact adapted) */
+var QRCode;!function(o){function t(o){this.mode=u.MODE_8BIT_BYTE,this.data=o}function e(o,t){this.typeNumber=o,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function r(t,e){if(void 0===t.length)throw new Error(t.length+"/"+e);for(var r=0,n=0;n<t.length&&r<e;)r+=t[n].length,n++;if(r!=e)throw new Error(r+"/"+e)}function n(o,t){this.totalCount=o,this.dataCount=t}function i(){for(var o=0,t=0,e=arguments.length;t<e;t++)o+=arguments[t].byteLength;var r=new Uint8Array(o),n=0;for(t=0;t<e;t++)r.set(arguments[t],n),n+=arguments[t].byteLength;return r}function u(){}function f(o,t){var e=o<<8|t;return e}function a(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}function h(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}t.prototype={getLength:function(){return this.data.length},write:function(o){for(var t=0,e=this.data.length;t<e;t++)o.put(this.data.charCodeAt(t),8)}},e.prototype={addData:function(o){var r=new t(o);this.dataList.push(r),this.dataCache=null},isDark:function(o,t){if(0>o||this.moduleCount<=o||0>t||this.moduleCount<=t)throw new Error(o+","+t);return this.modules[o][t]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1)},makeImpl:function(o){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var t=0,e=this.moduleCount;t<e;t++){this.modules[t]=new Array(this.moduleCount);for(var r=0;r<e;r++)this.modules[t][r]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.dataCache=this.createData(),this.mapData(this.dataCache,o)},setupPositionProbePattern:function(o,t){for(var e=-1;7>=e;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;7>=r;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=e>=0&&6>=e&&(0==r||6==r)||r>=0&&6>=r&&(0==e||6==e)||e>=2&&4>=e&&r>=2&&4>=r?!0:!1)},setupTimingPattern:function(){for(var o=8,t=this.moduleCount-8,e=0;e<this.moduleCount-8;e++)null==this.modules[e][6]&&(this.modules[e][6]=e%2==0),null==this.modules[6][e]&&(this.modules[6][e]=e%2==0)},setupPositionAdjustPattern:function(){for(var o=u.getPatternPosition(this.typeNumber),t=0,e=o.length;t<e;t++)for(var r=0;r<e;r++){var n=o[t],i=o[r];if(null==this.modules[n][i])for(var f=-2;2>=f;f++)for(var a=-2;2>=a;a++)this.modules[n+f][i+a]=-2==f||2==f||-2==a||2==a||0==f&&0==a?!0:!1}},mapData:function(o,t){for(var e=-1,r=this.moduleCount-1,n=7,i=this.moduleCount-1;i>0;i-=2)for(6==i&&i--;;){for(var f=0;2>f;f++){if(null==this.modules[i-f][r]){var a=!1;o.length>e+1&&(a=((o[++e]>>>n)&1)==1),this.modules[i-f][r]=a}if(--n<0&&(n=7),0==f&&--r<0)return}if(0>i)break}},createData:function(){var o=new Array,n=0;this.dataList.forEach(function(t){n+=t.getLength()}),r(this.dataList,n);for(var i=new Array(n),u=0,f=0;f<this.dataList.length;f++)for(var a=this.dataList[f],h=0;h<a.getLength();h++)i[u++]=a.data.charCodeAt(h);return i}},n.getRSBlocks=function(o,t){return[new n(26,9)]},u.MODE_NUMBER=1,u.MODE_ALPHA_NUM=2,u.MODE_8BIT_BYTE=4,u.MODE_KANJI=8,u.getPatternPosition=function(){return[]},u.getErrorCorrectPolynomial=function(){return[]},u.getLengthInBits=function(){return[]},u.getLostPoint=function(){return 0},o.QRCode=e}(this);
+
 function generateQRCodeCanvas(text, size=320){
-  const qr = new QRCode(4, "H");
+  const qr = new QRCode(4,"H");
   qr.addData(text);
   qr.make();
 
@@ -195,11 +162,10 @@ function generateQRCodeCanvas(text, size=320){
 }
 </script>
 
-<!-- ================================ -->
-<!-- MAIN APPLICATION SCRIPT -->
-<!-- ================================ -->
+<!-- ==========================
+     MAIN APP LOGIC
+     ========================== -->
 <script>
-
 (() => {
 
 const QUESTIONS = [
@@ -224,13 +190,7 @@ let dateEl, buildingEl, floorEl, counterEl;
 let btnSaveLocal, btnLoadLocal, btnClearLocal, btnDownload, btnReset;
 let entriesBody, renderArea;
 
-/* Utility Functions */
-const escapeHTML = s => (s || "").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-
-function composeAnswers(v){
-  return QUESTIONS.map(q => `${q.text.replace("?","")}: ${v[q.key]}`).join(" • ");
-}
-
+function escapeHTML(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 function waitForImages(el){
   const imgs=[...el.querySelectorAll("img")];
   return Promise.all(imgs.map(img=>new Promise(res=>{
@@ -238,8 +198,7 @@ function waitForImages(el){
     else img.onload=img.onerror=res;
   })));
 }
-
-function safeFilename(s){ return (s||"counter").replace(/[^\w\-]/g,"_").slice(0,50); }
+function safeFilename(s){return (s||"counter").replace(/[^\w\-]/g,"_").slice(0,50);}
 
 /* Render Questions */
 function renderQuestionCards(){
@@ -375,69 +334,69 @@ window.__deleteEntry = function(id){
   loadEntriesToUI();
 };
 
-/* ===================================================== */
-/* VARIANT B — CARD BUILDER + DATE UNDER COUNTER + QR + EXPORT */
-/* ===================================================== */
-
+/* Build QR text & Variant B export (with date under stall info) */
 function buildQRText(meta, answers){
   const lines = [];
   lines.push(`Stall: ${meta.counter}`);
   lines.push(`Score: ${meta.score}/120`);
   lines.push(`Rating: ${meta.rating.toFixed(1)} / 5`);
-  lines.push("");
-
+  lines.push('');
   QUESTIONS.forEach(q=>{
     const ans = (answers[q.key] || "No");
-    const up = ans.toUpperCase();
+    const up = (ans||'').toUpperCase();
     let score = 0;
-    if(q.negative) score = up==="NO" ? 10 : 0;
-    else score = up==="YES" ? 10 : 0;
+    if(q.negative) score = up === "NO" ? 10 : 0;
+    else score = up === "YES" ? 10 : 0;
     lines.push(`${q.key}: ${score}/10`);
   });
-
-  lines.push("");
+  lines.push('');
   lines.push(`Rated On: ${meta.date}`);
-  lines.push("Konarak Food Services");
-  return lines.join("\n");
+  lines.push('Konarak Food Services');
+  return lines.join('\n');
 }
 
 async function buildVariantBAndExport(){
+  const counterVal=(counterEl.value||"").trim()||"—";
+  const buildingVal=(buildingEl.value||"").trim()||"—";
+  const floorVal=(floorEl.value||"").trim()||"—";
+  const dateVal=(dateEl.value||"").trim()||new Date().toISOString().slice(0,10);
 
+  const { total, percent, rating, values } = computeAndRenderScore();
   const meta = {
-    building: (buildingEl.value || "—").trim(),
-    floor: (floorEl.value || "—").trim(),
-    counter: (counterEl.value || "—").trim(),
-    date: dateEl.value || new Date().toISOString().slice(0,10)
+    counter: counterVal,
+    building: buildingVal,
+    floor: floorVal,
+    date: dateVal,
+    score: total,
+    percentage: percent,
+    rating: Number((rating).toFixed(1))
   };
 
-  const result = computeAndRenderScore();
-  meta.score = result.total;
-  meta.percentage = result.percent;
-  meta.rating = Number(result.rating.toFixed(1));
-  const answers = result.values;
+  renderArea.innerHTML = '';
 
-  renderArea.innerHTML = "";
-  renderArea.style.width = "1080px";
-  renderArea.style.height = "1920px";
-
-  const card = document.createElement("div");
-  card.style.width = "1080px";
-  card.style.height = "1920px";
-  card.style.background = "linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)";
-  card.style.color = "#fff";
-  card.style.position = "relative";
-  card.style.padding = "80px 60px";
-  card.style.boxSizing = "border-box";
-  card.style.fontFamily = "'Segoe UI',sans-serif";
-  card.style.textAlign = "center";
+  const card = document.createElement('div');
+  card.style.width = '1080px';
+  card.style.height = '1920px';
+  card.style.margin = '0';
+  card.style.padding = '80px 60px';
+  card.style.boxSizing = 'border-box';
+  card.style.position = 'relative';
+  card.style.overflow = 'hidden';
+  card.style.display = 'flex';
+  card.style.flexDirection = 'column';
+  card.style.alignItems = 'center';
+  card.style.justifyContent = 'flex-start';
+  card.style.background = 'linear-gradient(180deg, #0a0f24, #1e3a8a, #4f46e5)';
+  card.style.color = '#fff';
+  card.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  card.style.textAlign = 'center';
 
   card.innerHTML = `
-    <div>
-      <img src="logo.png" style="height:120px;margin-bottom:20px" onerror="this.style.display='none'">
-      <div style="font-size:42px;font-weight:900;">Konarak — Stall Audit</div>
+    <div style="text-align:center;">
+      <img src="logo.png" style="height:120px" onerror="this.style.display='none'">
+      <div style="font-size:42px;font-weight:900;margin-top:20px;">Konarak — Stall Audit</div>
     </div>
 
-    <!-- COUNTER BLOCK -->
     <div style="margin-top:100px;">
       <div style="font-size:84px;font-weight:900;">${escapeHTML(meta.counter)}</div>
       <div style="margin-top:10px;font-size:40px;opacity:0.95;">
@@ -448,21 +407,14 @@ async function buildVariantBAndExport(){
       </div>
     </div>
 
-    <!-- SCORE BLOCK -->
     <div style="margin-top:120px;">
       <div id="vStars"></div>
-      <div style="margin-top:30px;font-size:70px;font-weight:900;">
-        ${meta.score} / 120
-      </div>
-      <div style="margin-top:14px;font-size:40px;opacity:0.95;">
-        ${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5
-      </div>
+      <div style="margin-top:30px;font-size:70px;font-weight:900;">${meta.score} / 120</div>
+      <div style="margin-top:14px;font-size:40px;opacity:0.95;">${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
     </div>
 
-    <!-- QR HOLDER -->
     <div id="qrHolder" style="margin-top:120px;"></div>
 
-    <!-- SEAL -->
     <div style="position:absolute;left:0;right:0;bottom:80px;text-align:center;">
       <img src="seel.png" style="height:240px" onerror="this.style.display='none'">
     </div>
@@ -470,85 +422,98 @@ async function buildVariantBAndExport(){
 
   renderArea.appendChild(card);
 
-  /* Render stars */
-  const vStars = card.querySelector("#vStars");
+  // stars
+  const vStars = card.querySelector('#vStars');
   const full = Math.floor(meta.rating);
   const half = (meta.rating - full) >= 0.5;
   for(let i=0;i<5;i++){
-    const s = document.createElement("span");
-    s.style.fontSize = "70px";
-    s.style.margin = "6px";
-    if(i < full){ s.textContent = "★"; s.style.color = "gold"; }
-    else if(i===full && half){ s.textContent="★"; s.style.color="gold"; s.style.opacity="0.6"; }
-    else{ s.textContent="☆"; s.style.color="rgba(255,255,255,0.32)"; }
+    const s=document.createElement('span');
+    s.style.fontSize='70px'; s.style.margin='6px';
+    if(i<full){ s.textContent='★'; s.style.color='gold'; }
+    else if(i===full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
+    else { s.textContent='☆'; s.style.color='rgba(255,255,255,0.32)'; }
     vStars.appendChild(s);
   }
 
-  /* QR CODE */
-  const qrText = buildQRText(meta, answers);
+  // QR
+  const qrText = buildQRText(meta, values);
   const qrCanvas = generateQRCodeCanvas(qrText, 320);
-  const qrImg = document.createElement("img");
-  qrImg.src = qrCanvas.toDataURL("image/png");
-  qrImg.style.height = "320px";
-  qrImg.style.width = "320px";
-  qrImg.style.marginTop = "20px";
-
-  card.querySelector("#qrHolder").appendChild(qrImg);
+  const qrImg = document.createElement('img');
+  qrImg.src = qrCanvas.toDataURL('image/png');
+  qrImg.style.width = '320px';
+  qrImg.style.height = '320px';
+  qrImg.style.marginTop = '20px';
+  card.querySelector('#qrHolder').appendChild(qrImg);
 
   await waitForImages(card);
 
   try{
-    const canvas = await html2canvas(card, { scale: 2, backgroundColor: null });
-    canvas.toBlob(blob=>{
+    const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+    canvas.toBlob(function(blob){
+      if(!blob){ alert('Export failed (no blob).'); return; }
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
       a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.date}.png`;
       document.body.appendChild(a);
       a.click();
-      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); },700);
-    },"image/png",1.0);
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 900);
+    }, 'image/png', 1.0);
   } catch(err){
-    alert("Error generating image: " + err.message);
+    console.error('Export error', err);
+    alert('Error generating image: ' + (err && err.message ? err.message : err));
+  } finally {
+    renderArea.innerHTML = '';
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  questionsGrid = document.getElementById("questionsGrid");
-  totalScoreEl = document.getElementById("totalScore");
-  percentageDisplayEl = document.getElementById("percentageDisplay");
-  ratingStarsEl = document.getElementById("ratingStars");
-  ratingValueEl = document.getElementById("ratingValue");
+/* Init wiring */
+document.addEventListener('DOMContentLoaded', () => {
+  questionsGrid = document.getElementById('questionsGrid');
+  totalScoreEl = document.getElementById('totalScore');
+  percentageDisplayEl = document.getElementById('percentageDisplay');
+  ratingStarsEl = document.getElementById('ratingStars');
+  ratingValueEl = document.getElementById('ratingValue');
 
-  dateEl = document.getElementById("date");
-  buildingEl = document.getElementById("building");
-  floorEl = document.getElementById("floor");
-  counterEl = document.getElementById("counter");
+  dateEl = document.getElementById('date');
+  buildingEl = document.getElementById('building');
+  floorEl = document.getElementById('floor');
+  counterEl = document.getElementById('counter');
 
-  btnSaveLocal = document.getElementById("btnSaveLocal");
-  btnLoadLocal = document.getElementById("btnLoadLocal");
-  btnClearLocal = document.getElementById("btnClearLocal");
-  btnDownload = document.getElementById("btnDownload");
-  btnReset = document.getElementById("btnReset");
-  entriesBody = document.getElementById("entriesBody");
-  renderArea = document.getElementById("renderArea");
+  btnSaveLocal = document.getElementById('btnSaveLocal');
+  btnLoadLocal = document.getElementById('btnLoadLocal');
+  btnClearLocal = document.getElementById('btnClearLocal');
+  btnDownload = document.getElementById('btnDownload');
+  btnReset = document.getElementById('btnReset');
+
+  entriesBody = document.getElementById('entriesBody');
+  renderArea = document.getElementById('renderArea');
 
   renderQuestionCards();
+  document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
+
+  if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
+  if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
+  if(btnClearLocal) btnClearLocal.addEventListener('click', clearLocalEntries);
+
+  if(btnReset) btnReset.addEventListener('click', () => {
+    buildingEl.value=''; floorEl.value=''; counterEl.value='';
+    dateEl.value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
+    computeAndRenderScore();
+  });
+
+  if(btnDownload) btnDownload.addEventListener('click', async (e) => {
+    e.preventDefault();
+    computeAndRenderScore();
+    await buildVariantBAndExport();
+  });
+
+  dateEl.value = new Date().toISOString().slice(0,10);
   computeAndRenderScore();
   loadEntriesToUI();
-
-  btnSaveLocal.onclick = saveEntryLocal;
-  btnLoadLocal.onclick = loadEntriesToUI;
-  btnClearLocal.onclick = () => { localStorage.removeItem(STORAGE_KEY); loadEntriesToUI(); };
-  btnReset.onclick = () => {
-    buildingEl.value=""; floorEl.value=""; counterEl.value="";
-    dateEl.value = new Date().toISOString().slice(0,10);
-    document.querySelectorAll(".form-control").forEach(s=>s.value="Yes");
-    computeAndRenderScore();
-  };
-
-  btnDownload.onclick = () => buildVariantBAndExport();
 });
+})();
 </script>
 
 </body>
