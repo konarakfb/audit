@@ -24,7 +24,7 @@ body{margin:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;backgroun
 .header .brand img{height:36px;width:36px;background:#fff;border-radius:6px;padding:3px}
 
 /* Container */
-.container{max-width:1100px;margin:22px auto;padding:0 18px}
+.container{max-width:1200px;margin:22px auto;padding:0 18px}
 .location-card{background:var(--card);padding:12px;border-radius:10px;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow)}
 .location-card input{padding:8px 10px;border-radius:8px;border:1px solid #e6eefc}
 
@@ -48,11 +48,11 @@ select.form-control{width:100%;padding:10px;border-radius:8px;border:1px solid #
 .table-responsive{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .table-responsive table{min-width:700px;border-collapse:collapse}
 
-/* Hidden render area (1080x1920) */
-#renderArea{position:fixed;top:0;left:0;width:1080px;height:1920px;opacity:0;pointer-events:none;z-index:-1}
+/* Hidden render area (HD 2160x3840) */
+#renderArea{position:fixed;top:0;left:0;width:2160px;height:3840px;opacity:0;pointer-events:none;z-index:-1}
 
 /* Card internals used when building the image */
-.card-inner { width:1080px; height:1920px; box-sizing:border-box; position:relative; }
+.card-inner { width:2160px; height:3840px; box-sizing:border-box; position:relative; }
 
 /* Seal holder strategy: lower 32% zone reserved; seal centered vertically inside this zone */
 .seal-lower-zone { position:absolute; left:0; right:0; bottom:0; height:32%; display:flex; align-items:center; justify-content:center; text-align:center; }
@@ -72,7 +72,7 @@ select.form-control{width:100%;padding:10px;border-radius:8px;border:1px solid #
     <img src="logo.png" onerror="this.style.display='none'">
     Konarak — Stall Audit
   </div>
-  <button id="btnDownload" class="btn small">Generate Rating Card</button>
+  <button id="btnDownload" class="btn small">Generate Rating Card (HD)</button>
 </div>
 
 <div class="container">
@@ -137,322 +137,313 @@ select.form-control{width:100%;padding:10px;border-radius:8px;border:1px solid #
 <div id="renderArea"></div>
 
 <script>
-/* Final single-file script (Layout A base, 1080x1920 export, scale 2) */
+/* ===== Utilities & config ===== */
+const QUESTIONS = [
+  { key:'sales_report', text:'Daily sales report submitted?' },
+  { key:'weekly_checklist', text:'Weekly checklist report submitted?' },
+  { key:'feedback_report', text:'Daily feedback report submitted?' },
+  { key:'breakfast_on_time', text:'Breakfast arranged on time (08:00)?' },
+  { key:'lunch_on_time', text:'Lunch arranged on time (12:30)?' },
+  { key:'dinner_on_time', text:'Dinner arranged on time (20:00)?' },
+  { key:'temp_photo', text:'Food temperature measured & photo posted?' },
+  { key:'staff_behaviour', text:'Staff behaviour is good?' },
+  { key:'staff_hygiene', text:'Staff hygiene is good?' },
+  { key:'stall_clean', text:'Stall is clean and hygienic?' },
+  { key:'food_complaint', text:'Food quality complaints received?' },
+  { key:'cbre_complaint', text:'CBRE complaint received?' },
+  { key:'cognizant_complaint', text:'Cognizant complaint received?' }
+];
+const MAX_SCORE = QUESTIONS.length * 10; // 130
+const STORAGE_KEY = 'konarak_audit_entries_final';
 
-(() => {
-  const QUESTIONS = [
-    { key:'sales_report', text:'Daily sales report submitted?' },
-    { key:'weekly_checklist', text:'Weekly checklist report submitted?' },
-    { key:'feedback_report', text:'Daily feedback report submitted?' },
-    { key:'breakfast_on_time', text:'Breakfast arranged on time (08:00)?' },
-    { key:'lunch_on_time', text:'Lunch arranged on time (12:30)?' },
-    { key:'dinner_on_time', text:'Dinner arranged on time (20:00)?' },
-    { key:'temp_photo', text:'Food temperature measured & photo posted?' },
-    { key:'staff_behaviour', text:'Staff behaviour is good?' },
-    { key:'staff_hygiene', text:'Staff hygiene is good?' },
-    { key:'stall_clean', text:'Stall is clean and hygienic?' },
-    { key:'food_complaint', text:'Food quality complaints received?' },
-    { key:'cbre_complaint', text:'CBRE complaint received?' },
-    { key:'cognizant_complaint', text:'Cognizant complaint received?' }
-  ];
+/* Helpers */
+function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_').slice(0,64); }
+function formatDateDDMMYYYY(iso){ if(!iso) return ''; const p = iso.split('-'); if(p.length!==3) return iso; return `${p[2]}/${p[1]}/${p[0]}`; }
+function waitForImages(container){ const imgs = Array.from(container.querySelectorAll('img')); return Promise.all(imgs.map(i=>new Promise(r=>{ if(i.complete) r(); else { i.onload = r; i.onerror = r; } })) ); }
 
-  const MAX_SCORE = 130;
-  const STORAGE_KEY = 'konarak_audit_vfinal';
+/* ===== DOM refs (populated on DOMContentLoaded) ===== */
+let questionsGrid,totalScoreEl,percentageDisplayEl,ratingStarsEl,ratingValueEl;
+let dateEl,buildingEl,floorEl,counterEl;
+let btnSaveLocal,btnLoadLocal,btnClearLocal,btnDownload,btnReset;
+let entriesBody,renderArea;
 
-  // DOM refs
-  let questionsGrid, totalScoreEl, percentageDisplayEl, ratingStarsEl, ratingValueEl;
-  let dateEl, buildingEl, floorEl, counterEl;
-  let btnSaveLocal, btnLoadLocal, btnClearLocal, btnDownload, btnReset;
-  let entriesBody, renderArea;
-
-  function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-  function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_').slice(0,64); }
-
-  function renderQuestionCards(){
-    questionsGrid.innerHTML = '';
-    QUESTIONS.forEach(q=>{
-      const card = document.createElement('div');
-      card.className = 'qcard';
-      let options = '';
-      for(let i=0;i<=10;i++) options += `<option value="${i}">${i}</option>`;
-      card.innerHTML = `
-        <div style="font-weight:600">${escapeHTML(q.text)}</div>
-        <div style="margin-top:8px">
-          <select class="form-control" data-key="${q.key}">${options}</select>
-        </div>
-      `;
-      questionsGrid.appendChild(card);
-    });
-    document.querySelectorAll('.form-control').forEach(el => el.addEventListener('change', computeAndRenderScore));
-  }
-
-  function computeAndRenderScore(){
-    const vals = {};
-    QUESTIONS.forEach(q=>{
-      const sel = document.querySelector(`select[data-key="${q.key}"]`);
-      vals[q.key] = sel ? parseInt(sel.value || '0', 10) : 0;
-    });
-    const total = Object.values(vals).reduce((a,b)=>a+b,0);
-    const percent = (total / MAX_SCORE) * 100;
-    const rating = (percent/100)*5;
-
-    totalScoreEl.textContent = `${total} / ${MAX_SCORE}`;
-    percentageDisplayEl.textContent = `${percent.toFixed(1)}%`;
-    ratingValueEl.textContent = `${rating.toFixed(1)} / 5`;
-
-    // stars
-    ratingStarsEl.innerHTML = '';
-    const full = Math.floor(rating), half = (rating - full) >= 0.5;
-    for(let i=0;i<5;i++){
-      const s = document.createElement('span');
-      s.style.fontSize = '18px'; s.style.marginRight='6px';
-      if(i < full){ s.textContent = '★'; s.style.color = 'gold'; }
-      else if(i === full && half){ s.textContent = '★'; s.style.color='gold'; s.style.opacity='0.6'; }
-      else { s.textContent = '☆'; s.style.color='#ccc'; }
-      ratingStarsEl.appendChild(s);
-    }
-
-    return { total, percent, rating, values: vals };
-  }
-
-  function buildQRText(meta, answers){
-    let out = 'AUDIT-DATA:\n';
-    out += `Stall: ${meta.counter}\n`;
-    out += `Building: ${meta.building}\n`;
-    out += `Floor: ${meta.floor}\n`;
-    out += `Score: ${meta.score}/${MAX_SCORE}\n`;
-    out += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
-    QUESTIONS.forEach(q=>{
-      const sc = parseInt(answers[q.key] || 0, 10);
-      out += `${q.key}: ${sc}/10\n`;
-    });
-    out += `\nRated On: ${meta.dateFormatted}\nKonarak Food Services`;
-    return out;
-  }
-
-  function waitForImages(container){
-    const imgs = Array.from(container.querySelectorAll('img'));
-    return Promise.all(imgs.map(img => new Promise(res => {
-      if(img.complete) return res();
-      img.onload = img.onerror = res;
-    })));
-  }
-
-  /* Local storage functions */
-  function saveEntryLocal(){
-    const { total, percent, rating, values } = computeAndRenderScore();
-    const rec = {
-      id: 'e_' + Date.now(),
-      building: buildingEl.value.trim(),
-      floor: floorEl.value.trim(),
-      counter: counterEl.value.trim(),
-      date: dateEl.value,
-      total, percent, rating, values
-    };
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    arr.push(rec);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-    loadEntriesToUI();
-    alert('Saved locally');
-  }
-
-  function loadEntriesToUI(){
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    entriesBody.innerHTML = '';
-    arr.slice().reverse().forEach(r=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${r.date}</td><td>${escapeHTML(r.building)}</td><td>${escapeHTML(r.floor)}</td><td>${escapeHTML(r.counter)}</td><td>${r.total}</td><td>${r.percent.toFixed(1)}%</td><td>${r.rating.toFixed(1)} / 5</td><td><button class="btn small ghost" onclick="window.__load('${r.id}')">Load</button> <button class="btn small ghost" onclick="window.__del('${r.id}')">Del</button></td>`;
-      entriesBody.appendChild(tr);
-    });
-  }
-
-  window.__load = function(id){
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const r = arr.find(x=>x.id===id);
-    if(!r) return alert('Not found');
-    buildingEl.value = r.building || '';
-    floorEl.value = r.floor || '';
-    counterEl.value = r.counter || '';
-    dateEl.value = r.date || '';
-    Object.entries(r.values || {}).forEach(([k,v])=>{
-      const sel = document.querySelector(`select[data-key="${k}"]`);
-      if(sel) sel.value = v;
-    });
-    computeAndRenderScore();
-    window.scrollTo({top:0,behavior:'smooth'});
-  };
-
-  window.__del = function(id){
-    if(!confirm('Delete entry?')) return;
-    let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    arr = arr.filter(x=>x.id!==id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-    loadEntriesToUI();
-  };
-
-  /* Format date dd/mm/yyyy */
-  function formatDateDDMMYYYY(iso){
-    if(!iso) return '';
-    const p = iso.split('-');
-    if(p.length !== 3) return iso;
-    return `${p[2]}/${p[1]}/${p[0]}`;
-  }
-
-  /* Export Variant A (1080x1920, scale 2) */
-  async function generateCardAndDownload(){
-    const { total, percent, rating, values } = computeAndRenderScore();
-    const meta = {
-      counter: counterEl.value.trim() || '—',
-      building: buildingEl.value.trim() || '—',
-      floor: floorEl.value.trim() || '—',
-      dateRaw: dateEl.value || new Date().toISOString().slice(0,10),
-      dateFormatted: formatDateDDMMYYYY(dateEl.value || new Date().toISOString().slice(0,10)),
-      score: total,
-      percent, rating: Number(rating.toFixed(1))
-    };
-
-    // Build a card container (1080 x 1920)
-    renderArea.innerHTML = '';
-    renderArea.style.width = '1080px';
-    renderArea.style.height = '1920px';
-
-    const card = document.createElement('div');
-    card.className = 'card-inner';
-    card.style.background = 'linear-gradient(180deg,#0b1220,#3b82f6)';
-    card.style.color = '#fff';
-    card.style.textAlign = 'center';
-    card.style.position = 'relative';
-    card.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif';
-
-    // content (Layout A)
-    card.innerHTML = `
-      <div style="padding-top:20px;">
-        <img src="logo.png" style="height:80px" onerror="this.style.display='none'">
-        <div style="font-size:24px;font-weight:800;margin-top:12px">Konarak — Stall Audit</div>
-      </div>
-
-      <div style="margin-top:40px;">
-        <div style="font-size:56px;font-weight:900;">${escapeHTML(meta.counter)}</div>
-        <div style="margin-top:8px;font-size:20px;">${escapeHTML(meta.building)} — ${escapeHTML(meta.floor)}</div>
-        <div style="margin-top:6px;font-size:16px;">Rated On: ${escapeHTML(meta.dateFormatted)}</div>
-      </div>
-
-      <div style="margin-top:28px;" id="scoreBlock">
-        <div id="cardStars"></div>
-        <div style="margin-top:12px;font-size:44px;font-weight:900;">${meta.score} / ${MAX_SCORE}</div>
-        <div style="margin-top:6px;font-size:16px;">${meta.percent.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
-      </div>
-
-      <div id="qrHolder" style="position:absolute; left:0; right:0; top:58%; transform:translateY(-50%); text-align:center;"></div>
-
-      <div class="seal-lower-zone">
-        <img src="seel.png" style="height:180px" onerror="this.style.display='none'">
+/* ===== Render questions as 0-10 selects ===== */
+function renderQuestionCards(){
+  questionsGrid.innerHTML = '';
+  QUESTIONS.forEach(q=>{
+    const div = document.createElement('div');
+    div.className = 'qcard';
+    let opts = '';
+    for(let i=0;i<=10;i++){ opts += `<option value="${i}">${i}</option>`; }
+    div.innerHTML = `
+      <div style="font-weight:600">${escapeHTML(q.text)}</div>
+      <div style="margin-top:8px">
+        <select class="form-control" data-key="${q.key}">${opts}</select>
       </div>
     `;
-    renderArea.appendChild(card);
+    questionsGrid.appendChild(div);
+  });
+  document.querySelectorAll('.form-control').forEach(el => el.addEventListener('change', computeAndRenderScore));
+}
 
-    // stars
-    const starsDiv = card.querySelector('#cardStars');
-    const full = Math.floor(meta.rating);
-    const half = (meta.rating - full) >= 0.5;
-    for(let i=0;i<5;i++){
-      const sp = document.createElement('span');
-      sp.style.fontSize = '48px'; sp.style.margin = '6px';
-      if(i < full){ sp.textContent = '★'; sp.style.color = 'gold'; }
-      else if(i === full && half){ sp.textContent = '★'; sp.style.color = 'gold'; sp.style.opacity = '0.6'; }
-      else { sp.textContent = '☆'; sp.style.color = 'rgba(255,255,255,0.3)'; }
-      starsDiv.appendChild(sp);
-    }
+/* ===== Scoring (sum numeric values) ===== */
+function computeAndRenderScore(){
+  const values = {};
+  QUESTIONS.forEach(q=>{
+    const sel = document.querySelector(`select[data-key="${q.key}"]`);
+    values[q.key] = sel ? Number(sel.value) : 0;
+  });
+  const total = Object.values(values).reduce((a,b)=>a+b,0);
+  const percentage = (total / MAX_SCORE) * 100;
+  const rating = (percentage/100) * 5;
 
-    // QR creation: large and high resolution inside QR holder
-    const qrText = buildQRText({
-      counter: meta.counter,
-      building: meta.building,
-      floor: meta.floor,
-      score: meta.score,
-      rating: meta.rating,
-      dateFormatted: meta.dateFormatted
-    }, values);
+  totalScoreEl.textContent = `${total} / ${MAX_SCORE}`;
+  percentageDisplayEl.textContent = `${percentage.toFixed(1)}%`;
+  ratingValueEl.textContent = `${rating.toFixed(1)} / 5`;
 
-    const q = new QRious({ value: qrText, size: 640, level: 'H' });
-    const qrImg = document.createElement('img');
-    qrImg.src = q.toDataURL();
-    qrImg.style.width = '320px';
-    qrImg.style.height = '320px';
-    qrImg.style.margin = '0 auto';
-    const holder = card.querySelector('#qrHolder');
-    holder.appendChild(qrImg);
-
-    await waitForImages(card);
-
-    try {
-      const canvas = await html2canvas(card, { scale: 2, useCORS: true, backgroundColor: null });
-      canvas.toBlob(function(blob){
-        if(!blob){ alert('Export failed'); return; }
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.dateFormatted}.png`;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 1000);
-      }, 'image/png', 1.0);
-    } catch(err){
-      console.error('Export error', err);
-      alert('Error generating image: ' + (err && err.message ? err.message : err));
-    } finally {
-      renderArea.innerHTML = '';
-    }
+  // stars
+  ratingStarsEl.innerHTML = '';
+  const full = Math.floor(rating), half = (rating - full) >= 0.5;
+  for(let i=0;i<5;i++){
+    const s = document.createElement('span');
+    s.style.fontSize='18px'; s.style.marginRight='6px';
+    if(i < full){ s.textContent='★'; s.style.color='gold'; }
+    else if(i === full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
+    else { s.textContent='☆'; s.style.color='#ccc'; }
+    ratingStarsEl.appendChild(s);
   }
 
-  /* Wiring */
-  document.addEventListener('DOMContentLoaded', () => {
-    questionsGrid = document.getElementById('questionsGrid');
-    totalScoreEl = document.getElementById('totalScore');
-    percentageDisplayEl = document.getElementById('percentageDisplay');
-    ratingStarsEl = document.getElementById('ratingStars');
-    ratingValueEl = document.getElementById('ratingValue');
+  return { total, percentage, rating, values };
+}
 
-    dateEl = document.getElementById('date');
-    buildingEl = document.getElementById('building');
-    floorEl = document.getElementById('floor');
-    counterEl = document.getElementById('counter');
+/* ===== QR builder ===== */
+function buildQRText(meta, answers){
+  // meta: {counter, building, floor, dateFormatted, score, rating}
+  let lines = [];
+  lines.push(`Stall: ${meta.counter}`);
+  lines.push(`Building: ${meta.building}`);
+  lines.push(`Floor: ${meta.floor}`);
+  lines.push(`Score: ${meta.score}/${MAX_SCORE}`);
+  lines.push(`Rating: ${meta.rating.toFixed(1)} / 5`);
+  lines.push('');
+  QUESTIONS.forEach(q=>{
+    const v = Number(answers[q.key]) || 0;
+    lines.push(`${q.key}: ${v}/10`);
+  });
+  lines.push('');
+  lines.push(`Rated On: ${meta.dateFormatted}`);
+  lines.push('Konarak Food Services');
+  return lines.join('\n');
+}
 
-    btnSaveLocal = document.getElementById('btnSaveLocal');
-    btnLoadLocal = document.getElementById('btnLoadLocal');
-    btnClearLocal = document.getElementById('btnClearLocal');
-    btnDownload = document.getElementById('btnDownload');
-    btnReset = document.getElementById('btnReset');
+/* ===== Local storage functions ===== */
+function saveEntryLocal(){
+  const { total, percentage, rating, values } = computeAndRenderScore();
+  const rec = {
+    id: 'e_' + Date.now(),
+    building: buildingEl.value.trim(),
+    floor: floorEl.value.trim(),
+    counter: counterEl.value.trim(),
+    date: dateEl.value,
+    values, total, percentage, rating, timestamp: new Date().toISOString()
+  };
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  arr.push(rec);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
+  alert('Saved locally');
+}
 
-    entriesBody = document.getElementById('entriesBody');
-    renderArea = document.getElementById('renderArea');
+function loadEntriesToUI(){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  entriesBody.innerHTML = '';
+  arr.slice().reverse().forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date || ''}</td><td>${escapeHTML(r.building)}</td><td>${escapeHTML(r.floor)}</td><td>${escapeHTML(r.counter)}</td><td>${r.total}</td><td>${r.percentage.toFixed(1)}%</td><td>${r.rating.toFixed(1)} / 5</td><td><button class="btn small ghost" onclick="window.__loadEntry('${r.id}')">Load</button> <button class="btn small ghost" onclick="window.__deleteEntry('${r.id}')">Delete</button></td>`;
+    entriesBody.appendChild(tr);
+  });
+}
 
-    renderQuestionCards();
-    document.querySelectorAll('.form-control').forEach(s=>s.value='0');
+window.__loadEntry = function(id){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const r = arr.find(x=>x.id===id);
+  if(!r) return alert('Not found');
+  buildingEl.value = r.building || '';
+  floorEl.value = r.floor || '';
+  counterEl.value = r.counter || '';
+  dateEl.value = r.date || '';
+  Object.entries(r.values || {}).forEach(([k,v])=>{
+    const sel = document.querySelector(`select[data-key="${k}"]`);
+    if(sel) sel.value = v;
+  });
+  computeAndRenderScore();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
 
-    if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
-    if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
-    if(btnClearLocal) btnClearLocal.addEventListener('click', ()=>{ if(confirm('Clear all saved entries?')){ localStorage.removeItem(STORAGE_KEY); loadEntriesToUI(); } });
+window.__deleteEntry = function(id){
+  if(!confirm('Delete entry?')) return;
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  arr = arr.filter(x=>x.id!==id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
+};
 
-    if(btnReset) btnReset.addEventListener('click', ()=>{
-      buildingEl.value=''; floorEl.value=''; counterEl.value='';
-      dateEl.value = new Date().toISOString().slice(0,10);
-      document.querySelectorAll('.form-control').forEach(s=>s.value='0');
-      computeAndRenderScore();
-    });
+/* clear function */
+function clearLocalEntries(){
+  if(!confirm('Clear all saved entries?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  loadEntriesToUI();
+  alert('Cleared');
+}
 
-    if(btnDownload) btnDownload.addEventListener('click', async (e) => {
-      e.preventDefault();
-      computeAndRenderScore();
-      await generateCardAndDownload();
-    });
+/* ===== Export HD card (2160x3840) ===== */
+async function buildAndExportHD(){
+  const { total, percentage, rating, values } = computeAndRenderScore();
+  const meta = {
+    counter: counterEl.value.trim() || '—',
+    building: buildingEl.value.trim() || '—',
+    floor: floorEl.value.trim() || '—',
+    dateRaw: dateEl.value || new Date().toISOString().slice(0,10),
+    dateFormatted: formatDateDDMMYYYY(dateEl.value || new Date().toISOString().slice(0,10)),
+    score: total, percentage, rating: Number(rating.toFixed(1))
+  };
 
+  renderArea.innerHTML = '';
+
+  // build card
+  const card = document.createElement('div');
+  card.className = 'card-inner';
+  card.style.background = 'linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)';
+  card.style.color = '#fff';
+  card.style.textAlign = 'center';
+  card.style.position = 'relative';
+  card.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  card.style.overflow = 'hidden';
+  card.style.padding = '120px 100px';
+
+  card.innerHTML = `
+    <div style="text-align:center;">
+      <img src="logo.png" style="height:220px" onerror="this.style.display='none'">
+      <div style="font-size:84px;font-weight:900;margin-top:28px">Konarak — Stall Audit</div>
+    </div>
+
+    <div style="margin-top:120px;">
+      <div style="font-size:168px;font-weight:900;">${escapeHTML(meta.counter)}</div>
+      <div style="margin-top:18px;font-size:64px;opacity:0.95;">${escapeHTML(meta.building)} — ${escapeHTML(meta.floor)}</div>
+      <div style="margin-top:12px;font-size:48px;opacity:0.9;">Rated On: ${escapeHTML(meta.dateFormatted)}</div>
+    </div>
+
+    <div style="margin-top:60px;">
+      <div id="cardStars"></div>
+      <div style="margin-top:26px;font-size:140px;font-weight:900;">${meta.score} / ${MAX_SCORE}</div>
+      <div style="margin-top:16px;font-size:56px;opacity:0.95;">${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
+    </div>
+
+    <div id="qrHolder" style="position:absolute; left:0; right:0; top:62%; transform:translateY(-50%); text-align:center;"></div>
+
+    <div class="seal-lower-zone">
+      <img src="seel.png" style="height:480px" onerror="this.style.display='none'">
+    </div>
+  `;
+
+  renderArea.appendChild(card);
+
+  // stars
+  const starsDiv = card.querySelector('#cardStars');
+  const full = Math.floor(meta.rating);
+  const half = (meta.rating - full) >= 0.5;
+  for(let i=0;i<5;i++){
+    const sp = document.createElement('span');
+    sp.style.fontSize = '140px'; sp.style.margin = '10px';
+    if(i < full){ sp.textContent = '★'; sp.style.color = 'gold'; }
+    else if(i === full && half){ sp.textContent = '★'; sp.style.color = 'gold'; sp.style.opacity = '0.6'; }
+    else { sp.textContent = '☆'; sp.style.color = 'rgba(255,255,255,0.32)'; }
+    starsDiv.appendChild(sp);
+  }
+
+  // QR creation - use QRious for crisp QR
+  const qrText = buildQRText(meta, values);
+  const qr = new QRious({ value: qrText, size: 1680, level: 'H' });
+  const qrImg = document.createElement('img');
+  qrImg.src = qr.toDataURL();
+  qrImg.style.width = '840px';
+  qrImg.style.height = '840px';
+  qrImg.style.margin = '0 auto';
+  const holder = card.querySelector('#qrHolder');
+  holder.appendChild(qrImg);
+
+  // wait images
+  await waitForImages(card);
+
+  try{
+    // scale 3 for extra crispness on 2160x3840 base
+    const canvas = await html2canvas(card, { scale: 3, useCORS: true, backgroundColor: null, logging: false });
+    canvas.toBlob(function(blob){
+      if(!blob){ alert('Export failed (no blob)'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `konarak_rating_hd_${safeFilename(meta.counter)}_${meta.dateFormatted}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 1500);
+    }, 'image/png', 1.0);
+  } catch(err){
+    console.error('Export error', err);
+    alert('Error generating image: ' + (err && err.message ? err.message : err));
+  } finally {
+    renderArea.innerHTML = '';
+  }
+}
+
+/* ===== Wiring & init ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  questionsGrid = document.getElementById('questionsGrid');
+  totalScoreEl = document.getElementById('totalScore');
+  percentageDisplayEl = document.getElementById('percentageDisplay');
+  ratingStarsEl = document.getElementById('ratingStars');
+  ratingValueEl = document.getElementById('ratingValue');
+
+  dateEl = document.getElementById('date');
+  buildingEl = document.getElementById('building');
+  floorEl = document.getElementById('floor');
+  counterEl = document.getElementById('counter');
+
+  btnSaveLocal = document.getElementById('btnSaveLocal');
+  btnLoadLocal = document.getElementById('btnLoadLocal');
+  btnClearLocal = document.getElementById('btnClearLocal');
+  btnDownload = document.getElementById('btnDownload');
+  btnReset = document.getElementById('btnReset');
+
+  entriesBody = document.getElementById('entriesBody');
+  renderArea = document.getElementById('renderArea');
+
+  renderQuestionCards();
+  // default selects to 0
+  document.querySelectorAll('.form-control').forEach(s => s.value = '0');
+
+  if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
+  if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
+  if(btnClearLocal) btnClearLocal.addEventListener('click', clearLocalEntries);
+
+  if(btnReset) btnReset.addEventListener('click', () => {
+    buildingEl.value=''; floorEl.value=''; counterEl.value='';
     dateEl.value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll('.form-control').forEach(s => s.value = '0');
     computeAndRenderScore();
-    loadEntriesToUI();
   });
 
-})();
+  if(btnDownload) btnDownload.addEventListener('click', async (e) => {
+    e.preventDefault();
+    computeAndRenderScore();
+    await buildAndExportHD();
+  });
+
+  dateEl.value = new Date().toISOString().slice(0,10);
+  computeAndRenderScore();
+  loadEntriesToUI();
+});
 </script>
 
 </body>
