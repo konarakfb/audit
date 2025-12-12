@@ -326,13 +326,22 @@ window.__loadEntry = function(id){
   window.scrollTo(0,0);
 };
 
+
 window.__deleteEntry = function(id){
   if(!confirm("Delete entry?")) return;
-  let arr=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
-  arr=arr.filter(x=>x.id!==id);
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  arr = arr.filter(x => x.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   loadEntriesToUI();
 };
+
+/* FIX: This function was missing — now added */
+function clearLocalEntries(){
+  localStorage.removeItem(STORAGE_KEY);
+  loadEntriesToUI();
+  alert("All saved entries cleared.");
+}
+ 
 
 /* Build QR text & Variant B export (with date under stall info) */
 function buildQRText(meta, answers){
