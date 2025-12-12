@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Konarak — Stall Audit (Final)</title>
+<title>Konarak — Stall Audit (Fixed)</title>
 
+<!-- html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
@@ -48,13 +49,13 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
 .table-card{margin-top:20px;background:white;padding:16px;border-radius:12px;box-shadow:var(--shadow)}
 
 #renderArea{position:fixed;top:0;left:0;width:1080px;height:1920px;opacity:0;pointer-events:none;z-index:-1;}
-/* small responsive tweak for mobile */
 @media (max-width:640px){
   .location-card{flex-direction:column;align-items:stretch}
   .actions-card{width:100%}
 }
 </style>
 </head>
+
 <body>
 
 <div class="header">
@@ -116,38 +117,55 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
 
 <div id="renderArea"></div>
 
-<script>
-/* QR generator (self-contained, html2canvas-safe) */
-var QRCode;!function(o){function t(o){this.mode=u.MODE_8BIT_BYTE,this.data=o}function e(o,t){this.typeNumber=o,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function r(t,e){if(void 0===t.length)throw new Error(t.length+"/"+e);for(var r=0,n=0;n<t.length&&r<e;)r+=t[n].length,n++;if(r!=e)throw new Error(r+"/"+e)}function n(o,t){this.totalCount=o,this.dataCount=t}function i(){for(var o=0,t=0,e=arguments.length;t<e;t++)o+=arguments[t].byteLength;var r=new Uint8Array(o),n=0;for(t=0;t<e;t++)r.set(arguments[t],n),n+=arguments[t].byteLength;return r}function u(){}function f(o,t){var e=o<<8|t;return e}function a(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}function h(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}t.prototype={getLength:function(){return this.data.length},write:function(o){for(var t=0,e=this.data.length;t<e;t++)o.put(this.data.charCodeAt(t),8)}},e.prototype={addData:function(o){var r=new t(o);this.dataList.push(r),this.dataCache=null},isDark:function(o,t){if(0>o||this.moduleCount<=o||0>t||this.moduleCount<=t)throw new Error(o+","+t);return this.modules[o][t]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1)},makeImpl:function(o){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var t=0,e=this.moduleCount;t<e;t++){this.modules[t]=new Array(this.moduleCount);for(var r=0;r<e;r++)this.modules[t][r]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.dataCache=this.createData(),this.mapData(this.dataCache,o)},setupPositionProbePattern:function(o,t){for(var e=-1;7>=e;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;7>=r;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=e>=0&&6>=e&&(0==r||6==r)||r>=0&&6>=r&&(0==e||6==e)||e>=2&&4>=e&&r>=2&&4>=r?!0:!1)},setupTimingPattern:function(){for(var o=8,t=this.moduleCount-8,e=0;e<this.moduleCount-8;e++)null==this.modules[e][6]&&(this.modules[e][6]=e%2==0),null==this.modules[6][e]&&(this.modules[6][e]=e%2==0)},setupPositionAdjustPattern:function(){for(var o=u.getPatternPosition(this.typeNumber),t=0,e=o.length;t<e;t++)for(var r=0;r<e;r++){var n=o[t],i=o[r];if(null==this.modules[n][i])for(var f=-2;2>=f;f++)for(var a=-2;2>=a;a++)this.modules[n+f][i+a]=-2==f||2==f||-2==a||2==a||0==f&&0==a?!0:!1}},mapData:function(o,t){for(var e=-1,r=this.moduleCount-1,n=7,i=this.moduleCount-1;i>0;i-=2)for(6==i&&i--;;){for(var f=0;2>f;f++){if(null==this.modules[i-f][r]){var a=!1;o.length>e+1&&(a=((o[++e]>>>n)&1)==1),this.modules[i-f][r]=a}if(--n<0&&(n=7),0==f&&--r<0)return}if(0>i)break}},createData:function(){var o=new Array,n=0;this.dataList.forEach(function(t){n+=t.getLength()}),r(this.dataList,n);for(var i=new Array(n),u=0,f=0;f<this.dataList.length;f++)for(var a=this.dataList[f],h=0;h<a.getLength();h++)i[u++]=a.data.charCodeAt(h);return i}},n.getRSBlocks=function(o,t){return[new n(26,9)]},u.MODE_NUMBER=1,u.MODE_ALPHA_NUM=2,u.MODE_8BIT_BYTE=4,u.MODE_KANJI=8,u.getPatternPosition=function(){return[]},u.getErrorCorrectPolynomial=function(){return[]},u.getLengthInBits=function(){return[]},u.getLostPoint=function(){return 0},o.QRCode=e}(this);
+<!-- PART 1 END: core layout, styles, and placeholders.
+     Request the next part now: "send part 2" -->
+<!-- ================================
+     PART 2 — Stable QR Generator
+================================ -->
 
-function generateQRCodeCanvas(text, size=320){
-  const qr = new QRCode(4,"H");
+<!-- Lightweight stable QR generator (NO NaN errors, supports long text) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+<script>
+/* Wrapper to generate a clean QR canvas */
+function generateQRCodeCanvas(text, size = 320){
+  const qr = qrcode(0, 'H');
   qr.addData(text);
   qr.make();
 
   const count = qr.getModuleCount();
   const tile = size / count;
 
-  const canvas = document.createElement("canvas");
+  const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
-  const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0,0,size,size);
+  const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = "#000000";
-  for(let r=0;r<count;r++){
-    for(let c=0;c<count;c++){
-      if(qr.isDark(r,c)){
-        ctx.fillRect(Math.floor(c*tile), Math.floor(r*tile), Math.ceil(tile), Math.ceil(tile));
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.fillStyle = "#000";
+  for(let r=0; r<count; r++){
+    for(let c=0; c<count; c++){
+      if(qr.isDark(r, c)){
+        ctx.fillRect(
+          Math.round(c * tile),
+          Math.round(r * tile),
+          Math.ceil(tile),
+          Math.ceil(tile)
+        );
       }
     }
   }
+
   return canvas;
 }
 </script>
 
+<!-- ================================
+     PART 2 — Core App Logic
+================================ -->
 <script>
 (() => {
 
@@ -173,7 +191,9 @@ let dateEl, buildingEl, floorEl, counterEl;
 let btnSaveLocal, btnLoadLocal, btnClearLocal, btnDownload, btnReset;
 let entriesBody, renderArea;
 
-function escapeHTML(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+/* Utility */
+function escapeHTML(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;"," > ":"&gt;"}[c]));}
+function safeFilename(s){return (s||"counter").replace(/[^\w\-]/g,"_").slice(0,50);}
 function waitForImages(el){
   const imgs=[...el.querySelectorAll("img")];
   return Promise.all(imgs.map(img=>new Promise(res=>{
@@ -181,8 +201,8 @@ function waitForImages(el){
     else img.onload=img.onerror=res;
   })));
 }
-function safeFilename(s){return (s||"counter").replace(/[^\w\-]/g,"_").slice(0,50);}
 
+/* Render Question Cards */
 function renderQuestionCards(){
   questionsGrid.innerHTML="";
   QUESTIONS.forEach(q=>{
@@ -190,7 +210,8 @@ function renderQuestionCards(){
     div.className="qcard";
     div.innerHTML=`
       <div style="display:flex;align-items:center;gap:8px;">
-        <img src="https://img.icons8.com/fluency/48/000000/checklist.png" style="height:30px;width:30px;">
+        <img src="https://img.icons8.com/fluency/48/000000/checklist.png"
+             style="height:30px;width:30px;">
         <div style="font-weight:600">${escapeHTML(q.text)}</div>
       </div>
       <div style="margin-top:8px">
@@ -205,11 +226,14 @@ function renderQuestionCards(){
     `;
     questionsGrid.appendChild(div);
   });
-  document.querySelectorAll(".form-control").forEach(s=>s.addEventListener("change",computeAndRenderScore));
+  document.querySelectorAll(".form-control")
+    .forEach(s=>s.addEventListener("change",computeAndRenderScore));
 }
 
+/* Scoring */
 function computeAndRenderScore(){
   const vals={};
+
   QUESTIONS.forEach(q=>{
     const el=document.querySelector(`select[data-key="${q.key}"]`);
     vals[q.key]=el?el.value:"No";
@@ -218,12 +242,12 @@ function computeAndRenderScore(){
   let total=0;
   QUESTIONS.forEach(q=>{
     const ans=(vals[q.key]||"").toUpperCase();
-    if(q.negative) total+= ans==="NO" ? 10 : 0;
-    else total+= ans==="YES" ? 10 : 0;
+    if(q.negative) total += ans === "NO" ? 10 : 0;
+    else total += ans === "YES" ? 10 : 0;
   });
 
-  const percent=(total/120)*100;
-  const rating=(percent/100)*5;
+  const percent = (total / 120) * 100;
+  const rating = (percent / 100) * 5;
 
   totalScoreEl.textContent = `${total} / 120`;
   percentageDisplayEl.textContent = `${percent.toFixed(1)}%`;
@@ -231,7 +255,7 @@ function computeAndRenderScore(){
 
   renderStars(rating);
 
-  return { total, percent, rating, values:vals };
+  return { total, percent, rating, values: vals };
 }
 
 function renderStars(r){
@@ -247,6 +271,7 @@ function renderStars(r){
   }
 }
 
+/* Local Storage */
 function saveEntryLocal(){
   const { total, percent, rating, values } = computeAndRenderScore();
   const e = {
@@ -314,37 +339,47 @@ window.__deleteEntry = function(id){
   loadEntriesToUI();
 };
 
+/* Missing function FIXED */
 function clearLocalEntries(){
   localStorage.removeItem(STORAGE_KEY);
   loadEntriesToUI();
-  alert("All saved entries cleared.");
+  alert("All entries cleared");
 }
 
+/* Build QR text for Variant B */
 function buildQRText(meta, answers){
-  const lines = [];
+  const lines=[];
   lines.push(`Stall: ${meta.counter}`);
   lines.push(`Score: ${meta.score}/120`);
   lines.push(`Rating: ${meta.rating.toFixed(1)} / 5`);
-  lines.push('');
+  lines.push("");
   QUESTIONS.forEach(q=>{
-    const ans = (answers[q.key] || "No");
-    const up = (ans||'').toUpperCase();
+    const ans = (answers[q.key]||"No");
+    const up = ans.toUpperCase();
     let score = 0;
-    if(q.negative) score = up === "NO" ? 10 : 0;
-    else score = up === "YES" ? 10 : 0;
+    if(q.negative) score = up==="NO" ? 10 : 0;
+    else score = up==="YES" ? 10 : 0;
     lines.push(`${q.key}: ${score}/10`);
   });
-  lines.push('');
+  lines.push("");
   lines.push(`Rated On: ${meta.date}`);
-  lines.push('Konarak Food Services');
-  return lines.join('\n');
+  lines.push("Konarak Food Services");
+  return lines.join("\n");
 }
+</script>
+
+<!-- PART 2 END — Request PART 3 next: “send part 3” -->
+<!-- =============================================
+     PART 3 — Variant B Card Builder + Export Logic
+============================================= -->
+<script>
+(async () => {
 
 async function buildVariantBAndExport(){
-  const counterVal=(counterEl.value||"").trim()||"—";
-  const buildingVal=(buildingEl.value||"").trim()||"—";
-  const floorVal=(floorEl.value||"").trim()||"—";
-  const dateVal=(dateEl.value||"").trim()||new Date().toISOString().slice(0,10);
+  const counterVal = (counterEl.value||"").trim() || "—";
+  const buildingVal = (buildingEl.value||"").trim() || "—";
+  const floorVal = (floorEl.value||"").trim() || "—";
+  const dateVal = (dateEl.value||"").trim() || new Date().toISOString().slice(0,10);
 
   const { total, percent, rating, values } = computeAndRenderScore();
   const meta = {
@@ -354,51 +389,59 @@ async function buildVariantBAndExport(){
     date: dateVal,
     score: total,
     percentage: percent,
-    rating: Number((rating).toFixed(1))
+    rating: Number(rating.toFixed(1))
   };
 
-  renderArea.innerHTML = '';
+  /* Clear old */
+  renderArea.innerHTML = "";
 
-  const card = document.createElement('div');
-  card.style.width = '1080px';
-  card.style.height = '1920px';
-  card.style.margin = '0';
-  card.style.padding = '80px 60px';
-  card.style.boxSizing = 'border-box';
-  card.style.position = 'relative';
-  card.style.overflow = 'hidden';
-  card.style.display = 'flex';
-  card.style.flexDirection = 'column';
-  card.style.alignItems = 'center';
-  card.style.justifyContent = 'flex-start';
-  card.style.background = 'linear-gradient(180deg, #0a0f24, #1e3a8a, #4f46e5)';
-  card.style.color = '#fff';
-  card.style.fontFamily = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-  card.style.textAlign = 'center';
+  /* Build card container */
+  const card = document.createElement("div");
+  card.style.width = "1080px";
+  card.style.height = "1920px";
+  card.style.margin = "0";
+  card.style.padding = "80px 60px";
+  card.style.boxSizing = "border-box";
+  card.style.position = "relative";
+  card.style.display = "flex";
+  card.style.flexDirection = "column";
+  card.style.alignItems = "center";
+  card.style.textAlign = "center";
+  card.style.background = "linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)";
+  card.style.color = "#fff";
+  card.style.fontFamily = "'Segoe UI', sans-serif";
 
   card.innerHTML = `
-    <div style="text-align:center;">
+    <div>
       <img src="logo.png" style="height:120px" onerror="this.style.display='none'">
-      <div style="font-size:42px;font-weight:900;margin-top:20px;">Konarak — Stall Audit</div>
+      <div style="font-size:42px;font-weight:900;margin-top:20px;">
+        Konarak — Stall Audit
+      </div>
     </div>
 
-    <div style="margin-top:100px;">
-      <div style="font-size:84px;font-weight:900;">${escapeHTML(meta.counter)}</div>
-      <div style="margin-top:10px;font-size:40px;opacity:0.95;">
+    <div style="margin-top:80px;">
+      <div style="font-size:84px;font-weight:900;">
+        ${escapeHTML(meta.counter)}
+      </div>
+      <div style="font-size:40px;opacity:0.9;margin-top:10px;">
         ${escapeHTML(meta.building)} — Floor ${escapeHTML(meta.floor)}
       </div>
-      <div style="margin-top:10px;font-size:36px;opacity:0.9;">
+      <div style="font-size:36px;margin-top:10px;opacity:0.9;">
         Rated On: ${escapeHTML(meta.date)}
       </div>
     </div>
 
-    <div style="margin-top:120px;">
+    <div style="margin-top:100px;">
       <div id="vStars"></div>
-      <div style="margin-top:30px;font-size:70px;font-weight:900;">${meta.score} / 120</div>
-      <div style="margin-top:14px;font-size:40px;opacity:0.95;">${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
+      <div style="margin-top:20px;font-size:70px;font-weight:900;">
+        ${meta.score} / 120
+      </div>
+      <div style="margin-top:12px;font-size:40px;opacity:0.9;">
+        ${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5
+      </div>
     </div>
 
-    <div id="qrHolder" style="margin-top:120px;"></div>
+    <div id="qrHolder" style="margin-top:80px;"></div>
 
     <div style="position:absolute;left:0;right:0;bottom:80px;text-align:center;">
       <img src="seel.png" style="height:240px" onerror="this.style.display='none'">
@@ -407,85 +450,109 @@ async function buildVariantBAndExport(){
 
   renderArea.appendChild(card);
 
-  const vStars = card.querySelector('#vStars');
+  /* Stars Rendering */
+  const vStars = card.querySelector("#vStars");
   const full = Math.floor(meta.rating);
-  const half = (meta.rating - full) >= 0.5;
+  const half = meta.rating - full >= 0.5;
   for(let i=0;i<5;i++){
-    const s=document.createElement('span');
-    s.style.fontSize='70px'; s.style.margin='6px';
-    if(i<full){ s.textContent='★'; s.style.color='gold'; }
-    else if(i===full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
-    else { s.textContent='☆'; s.style.color='rgba(255,255,255,0.32)'; }
+    const s = document.createElement("span");
+    s.style.fontSize="70px";
+    s.style.margin="8px";
+    if(i < full){
+      s.textContent="★";
+      s.style.color="gold";
+    } else if(i===full && half){
+      s.textContent="★";
+      s.style.color="gold";
+      s.style.opacity="0.6";
+    } else {
+      s.textContent="☆";
+      s.style.color="rgba(255,255,255,0.32)";
+    }
     vStars.appendChild(s);
   }
 
+  /* QR Code */
   const qrText = buildQRText(meta, values);
-  const qrCanvas = generateQRCodeCanvas(qrText, 320);
-  const qrImg = document.createElement('img');
-  qrImg.src = qrCanvas.toDataURL('image/png');
-  qrImg.style.width = '320px';
-  qrImg.style.height = '320px';
-  qrImg.style.marginTop = '20px';
-  card.querySelector('#qrHolder').appendChild(qrImg);
+  const qrCanvas = generateQRCodeCanvas(qrText, 400);
+  const qrImg = document.createElement("img");
+  qrImg.src = qrCanvas.toDataURL("image/png");
+  qrImg.style.width = "400px";
+  qrImg.style.height = "400px";
+  qrImg.style.marginTop = "20px";
+
+  card.querySelector("#qrHolder").appendChild(qrImg);
 
   await waitForImages(card);
 
+  /* Export Final Image */
   try{
-    const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+    const canvas = await html2canvas(card, {
+      scale: 2,
+      backgroundColor: null,
+      useCORS: true
+    });
+
     canvas.toBlob(function(blob){
-      if(!blob){ alert('Export failed (no blob).'); return; }
+      if(!blob){
+        alert("Export failed (no blob).");
+        return;
+      }
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.date}.png`;
       document.body.appendChild(a);
       a.click();
       setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 900);
-    }, 'image/png', 1.0);
+    }, "image/png", 1.0);
+
   } catch(err){
-    console.error('Export error', err);
-    alert('Error generating image: ' + (err && err.message ? err.message : err));
-  } finally {
-    renderArea.innerHTML = '';
+    console.error("Export error", err);
+    alert("Error generating image: " + err.message);
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  questionsGrid = document.getElementById('questionsGrid');
-  totalScoreEl = document.getElementById('totalScore');
-  percentageDisplayEl = document.getElementById('percentageDisplay');
-  ratingStarsEl = document.getElementById('ratingStars');
-  ratingValueEl = document.getElementById('ratingValue');
+/* DOM Initialization */
+document.addEventListener("DOMContentLoaded", () => {
+  questionsGrid = document.getElementById("questionsGrid");
+  totalScoreEl = document.getElementById("totalScore");
+  percentageDisplayEl = document.getElementById("percentageDisplay");
+  ratingStarsEl = document.getElementById("ratingStars");
+  ratingValueEl = document.getElementById("ratingValue");
 
-  dateEl = document.getElementById('date');
-  buildingEl = document.getElementById('building');
-  floorEl = document.getElementById('floor');
-  counterEl = document.getElementById('counter');
+  dateEl = document.getElementById("date");
+  buildingEl = document.getElementById("building");
+  floorEl = document.getElementById("floor");
+  counterEl = document.getElementById("counter");
 
-  btnSaveLocal = document.getElementById('btnSaveLocal');
-  btnLoadLocal = document.getElementById('btnLoadLocal');
-  btnClearLocal = document.getElementById('btnClearLocal');
-  btnDownload = document.getElementById('btnDownload');
-  btnReset = document.getElementById('btnReset');
+  btnSaveLocal = document.getElementById("btnSaveLocal");
+  btnLoadLocal = document.getElementById("btnLoadLocal");
+  btnClearLocal = document.getElementById("btnClearLocal");
+  btnDownload = document.getElementById("btnDownload");
+  btnReset = document.getElementById("btnReset");
 
-  entriesBody = document.getElementById('entriesBody');
-  renderArea = document.getElementById('renderArea');
+  entriesBody = document.getElementById("entriesBody");
+  renderArea = document.getElementById("renderArea");
 
   renderQuestionCards();
-  document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
 
-  if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
-  if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
-  if(btnClearLocal) btnClearLocal.addEventListener('click', clearLocalEntries);
+  document.querySelectorAll(".form-control").forEach(s=>s.value="Yes");
 
-  if(btnReset) btnReset.addEventListener('click', () => {
-    buildingEl.value=''; floorEl.value=''; counterEl.value='';
+  btnSaveLocal.addEventListener("click", saveEntryLocal);
+  btnLoadLocal.addEventListener("click", loadEntriesToUI);
+  btnClearLocal.addEventListener("click", clearLocalEntries);
+
+  btnReset.addEventListener("click", () => {
+    buildingEl.value="";
+    floorEl.value="";
+    counterEl.value="";
     dateEl.value = new Date().toISOString().slice(0,10);
-    document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
+    document.querySelectorAll(".form-control").forEach(s=>s.value="Yes");
     computeAndRenderScore();
   });
 
-  if(btnDownload) btnDownload.addEventListener('click', async (e) => {
+  btnDownload.addEventListener("click", async e => {
     e.preventDefault();
     computeAndRenderScore();
     await buildVariantBAndExport();
@@ -495,6 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
   computeAndRenderScore();
   loadEntriesToUI();
 });
+
 })();
 </script>
 
