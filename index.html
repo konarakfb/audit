@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Konarak — Stall Audit (Final Fixed)</title>
+<title>Konarak — Stall Audit (Final)</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
@@ -108,23 +108,24 @@ const QUESTIONS = [
   { key: 'cbre_complaint', text: 'CBRE complaint received?', negative: true },
   { key: 'cognizant_complaint', text: 'Cognizant complaint received?', negative: true }
 ];
-const STORAGE_KEY = 'konarak_audit_entries_v2';
+const STORAGE_KEY = 'konarak_audit_entries_final';
 
 function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_').slice(0,64); }
 function waitForImages(container){ const imgs=Array.from(container.querySelectorAll('img')); return Promise.all(imgs.map(i=>new Promise(r=>{ if(i.complete) r(); else i.onload=r; i.onerror=r }))); }
+function generateQRDataURL(text, size=420){ const qr=new QRious({ value: text, size: size, level: 'H' }); return qr.toDataURL(); }
 
-let questionsGrid, totalScoreEl, percentageDisplayEl, ratingStarsEl, ratingValueEl;
-let dateEl, buildingEl, floorEl, counterEl;
-let btnSaveLocal, btnLoadLocal, btnClearLocal, btnDownload, btnReset;
-let entriesBody, renderArea;
+let questionsGrid,totalScoreEl,percentageDisplayEl,ratingStarsEl,ratingValueEl;
+let dateEl,buildingEl,floorEl,counterEl;
+let btnSaveLocal,btnLoadLocal,btnClearLocal,btnDownload,btnReset;
+let entriesBody,renderArea;
 
 function renderQuestionCards(){
-  questionsGrid.innerHTML = '';
+  questionsGrid.innerHTML='';
   QUESTIONS.forEach(q=>{
-    const card = document.createElement('div');
-    card.className = 'qcard';
-    card.innerHTML = `
+    const card=document.createElement('div');
+    card.className='qcard';
+    card.innerHTML=`
       <div style="display:flex;align-items:center;gap:8px;">
         <img src="https://img.icons8.com/fluency/48/000000/checklist.png" style="height:30px;width:30px;">
         <div style="font-weight:600">${escapeHTML(q.text)}</div>
@@ -139,21 +140,21 @@ function renderQuestionCards(){
     `;
     questionsGrid.appendChild(card);
   });
-  document.querySelectorAll('.form-control').forEach(el => el.addEventListener('change', computeAndRenderScore));
+  document.querySelectorAll('.form-control').forEach(el=>el.addEventListener('change', computeAndRenderScore));
 }
 
 function computeAndRenderScore(){
-  const values = {};
-  QUESTIONS.forEach(q => {
-    const sel = document.querySelector(`select[data-key="${q.key}"]`);
-    values[q.key] = sel ? sel.value : 'No';
+  const values={};
+  QUESTIONS.forEach(q=>{
+    const sel=document.querySelector(`select[data-key="${q.key}"]`);
+    values[q.key]=sel?sel.value:'No';
   });
 
-  let total = 0;
-  QUESTIONS.forEach(q => {
-    const ans = (values[q.key] || '').toUpperCase();
-    if (q.negative) total += (ans === 'NO' ? 10 : 0);
-    else total += (ans === 'YES' ? 10 : 0);
+  let total=0;
+  QUESTIONS.forEach(q=>{
+    const ans=(values[q.key]||'').toUpperCase();
+    if(q.negative) total += ans === 'NO' ? 10 : 0;
+    else total += ans === 'YES' ? 10 : 0;
   });
 
   const max = QUESTIONS.length * 10;
@@ -164,14 +165,14 @@ function computeAndRenderScore(){
   percentageDisplayEl.textContent = `${percentage.toFixed(1)}%`;
   ratingValueEl.textContent = `${rating.toFixed(1)} / 5`;
 
-  ratingStarsEl.innerHTML = '';
+  ratingStarsEl.innerHTML='';
   const full = Math.floor(rating);
   const half = (rating - full) >= 0.5;
-  for (let i=0;i<5;i++){
-    const s = document.createElement('span');
-    s.style.fontSize = '20px'; s.style.marginRight='4px';
-    if (i < full){ s.textContent = '★'; s.style.color = 'gold'; }
-    else if (i === full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
+  for(let i=0;i<5;i++){
+    const s=document.createElement('span');
+    s.style.fontSize='20px'; s.style.marginRight='4px';
+    if(i < full){ s.textContent='★'; s.style.color='gold'; }
+    else if(i === full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
     else { s.textContent='☆'; s.style.color='#ddd'; }
     ratingStarsEl.appendChild(s);
   }
@@ -179,32 +180,22 @@ function computeAndRenderScore(){
   return { total, percentage, rating, values };
 }
 
-  function buildQRText(meta, answers){
-  let out = 'AUDIT-DATA:\n';
+function buildQRText(meta, answers){
+  let out='AUDIT-DATA:\n';
   out += `Stall: ${meta.counter}\n`;
   out += `Building: ${meta.building}\n`;
   out += `Floor: ${meta.floor}\n`;
   out += `Score: ${meta.score}/120\n`;
   out += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
-
   QUESTIONS.forEach(q=>{
     const ans = (answers[q.key] || 'No').toUpperCase();
     let score = 0;
-    if (q.negative) score = ans === 'NO' ? 10 : 0;
+    if(q.negative) score = ans === 'NO' ? 10 : 0;
     else score = ans === 'YES' ? 10 : 0;
     out += `${q.key}: ${score}/10\n`;
   });
-
-  out += `\nRated On: ${meta.date}\n`;
-  out += `Konarak Food Services\n`;
-
+  out += `\nRated On: ${meta.dateFormatted}\nKonarak Food Services`;
   return out;
-}
-
-
-function generateQRDataURL(text, size=380){
-  const qr = new QRious({ value: text, size: size, level: 'H' });
-  return qr.toDataURL();
 }
 
 function saveEntryLocal(){
@@ -216,8 +207,7 @@ function saveEntryLocal(){
     counter: counterEl.value.trim(),
     date: dateEl.value,
     answers: values,
-    total, percentage, rating,
-    timestamp: new Date().toISOString()
+    total, percentage, rating, timestamp: new Date().toISOString()
   };
   const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   arr.push(entry);
@@ -228,50 +218,31 @@ function saveEntryLocal(){
 
 function loadEntriesToUI(){
   const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  entriesBody.innerHTML = '';
+  entriesBody.innerHTML='';
   arr.slice().reverse().forEach(e=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${e.date}</td>
-      <td>${escapeHTML(e.building)}</td>
-      <td>${escapeHTML(e.floor)}</td>
-      <td>${escapeHTML(e.counter)}</td>
-      <td>${e.total}</td>
-      <td>${e.percentage.toFixed(1)}%</td>
-      <td>${e.rating.toFixed(1)} / 5</td>
-      <td>
-        <button class="btn small ghost" onclick="window.__konarak_load('${e.id}')">Load</button>
-        <button class="btn small ghost" onclick="window.__konarak_delete('${e.id}')">Delete</button>
-      </td>`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.date}</td><td>${escapeHTML(e.building)}</td><td>${escapeHTML(e.floor)}</td><td>${escapeHTML(e.counter)}</td><td>${e.total}</td><td>${e.percentage.toFixed(1)}%</td><td>${e.rating.toFixed(1)} / 5</td><td><button class="btn small ghost" onclick="window.__konarak_load('${e.id}')">Load</button> <button class="btn small ghost" onclick="window.__konarak_delete('${e.id}')">Delete</button></td>`;
     entriesBody.appendChild(tr);
   });
 }
 
-function loadEntryById(id){
+window.__konarak_load = function(id){
   const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  const e = arr.find(x => x.id === id);
-  if (!e) return alert('Not found');
-  buildingEl.value = e.building;
-  floorEl.value = e.floor;
-  counterEl.value = e.counter;
-  dateEl.value = e.date;
-  Object.keys(e.answers).forEach(k=>{
-    const sel = document.querySelector(`select[data-key="${k}"]`);
-    if (sel) sel.value = e.answers[k];
-  });
+  const e = arr.find(x=>x.id===id);
+  if(!e) return alert('Not found');
+  buildingEl.value=e.building; floorEl.value=e.floor; counterEl.value=e.counter; dateEl.value=e.date;
+  Object.keys(e.answers).forEach(k=>{ const sel=document.querySelector(`select[data-key="${k}"]`); if(sel) sel.value=e.answers[k]; });
   computeAndRenderScore();
   window.scrollTo({top:0,behavior:'smooth'});
-}
+};
 
-function deleteEntryById(id){
-  if (!confirm('Delete this entry?')) return;
+window.__konarak_delete = function(id){
+  if(!confirm('Delete entry?')) return;
   let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  arr = arr.filter(x => x.id !== id);
+  arr = arr.filter(x=>x.id!==id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
   loadEntriesToUI();
-}
-
-window.__konarak_load = loadEntryById;
-window.__konarak_delete = deleteEntryById;
+};
 
 function clearLocalEntries(){
   if(!confirm('Clear all saved entries?')) return;
@@ -281,42 +252,33 @@ function clearLocalEntries(){
 }
 
 async function buildVariantBAndExport(){
-  const counterVal = (counterEl.value||'—').trim();
-  const buildingVal = (buildingEl.value||'—').trim();
-  const floorVal = (floorEl.value||'—').trim();
-  const dateVal = (dateEl.value && dateEl.value.trim()) ? dateEl.value.trim() : new Date().toISOString().slice(0,10);
+  const counterVal=(counterEl.value||'—').trim();
+  const buildingVal=(buildingEl.value||'—').trim();
+  const floorVal=(floorEl.value||'—').trim();
+  const rawDate = (dateEl.value && dateEl.value.trim()) ? dateEl.value.trim() : new Date().toISOString().slice(0,10);
+  const parts = rawDate.split('-'); // YYYY-MM-DD
+  const dateFormatted = parts.length===3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : rawDate;
 
   const { total, percentage, rating, values } = computeAndRenderScore();
-  const meta = { counter: counterVal, building: buildingVal, floor: floorVal, date: dateVal, score: total, percentage, rating: Number(rating.toFixed(1)) };
+  const meta = { counter: counterVal, building: buildingVal, floor: floorVal, date: rawDate, dateFormatted, score: total, percentage, rating: Number(rating.toFixed(1)) };
 
-  renderArea.innerHTML = '';
+  renderArea.innerHTML='';
 
-  const card = document.createElement('div');
-  card.style.width = '1080px';
-  card.style.height = '1920px';
-  card.style.margin = '0';
-  card.style.padding = '80px 60px';
-  card.style.boxSizing = 'border-box';
-  card.style.position = 'relative';
-  card.style.overflow = 'hidden';
-  card.style.display = 'flex';
-  card.style.flexDirection = 'column';
-  card.style.alignItems = 'center';
-  card.style.textAlign = 'center';
-  card.style.background = 'linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)';
-  card.style.color = '#fff';
-  card.style.fontFamily = "'Segoe UI',sans-serif";
+  const card=document.createElement('div');
+  card.style.width='1080px'; card.style.height='1920px'; card.style.padding='80px 60px'; card.style.boxSizing='border-box'; card.style.position='relative';
+  card.style.display='flex'; card.style.flexDirection='column'; card.style.alignItems='center'; card.style.textAlign='center';
+  card.style.background='linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)'; card.style.color='#fff'; card.style.fontFamily="'Segoe UI',sans-serif";
 
   card.innerHTML = `
     <div style="text-align:center;">
       <img src="logo.png" style="height:120px" onerror="this.style.display='none'">
-      <div style="font-size:42px;font-weight:900;margin-top:20px;">Konarak — Stall Audit</div>
+      <div style="font-size:42px;font-weight:900;margin-top:20px">Konarak — Stall Audit</div>
     </div>
 
     <div style="margin-top:100px;">
       <div style="font-size:84px;font-weight:900;">${escapeHTML(meta.counter)}</div>
-      <div style="margin-top:10px;font-size:40px;opacity:0.95;">${escapeHTML(meta.building)} — Floor ${escapeHTML(meta.floor)}</div>
-      <div style="margin-top:10px;font-size:36px;opacity:0.9;">Rated On: ${escapeHTML(meta.date)}</div>
+      <div style="margin-top:10px;font-size:40px;opacity:0.95;">${escapeHTML(meta.building)} — ${escapeHTML(meta.floor)}</div>
+      <div style="margin-top:10px;font-size:36px;opacity:0.9;">Rated On: ${escapeHTML(meta.dateFormatted)}</div>
     </div>
 
     <div style="margin-top:120px;">
@@ -338,34 +300,31 @@ async function buildVariantBAndExport(){
   const full = Math.floor(meta.rating);
   const half = (meta.rating - full) >= 0.5;
   for(let i=0;i<5;i++){
-    const sp = document.createElement('span');
-    sp.style.fontSize='70px';
-    sp.style.margin='6px';
-    if(i < full){ sp.textContent='★'; sp.style.color='gold'; }
+    const sp=document.createElement('span');
+    sp.style.fontSize='70px'; sp.style.margin='6px';
+    if(i<full){ sp.textContent='★'; sp.style.color='gold'; }
     else if(i===full && half){ sp.textContent='★'; sp.style.color='gold'; sp.style.opacity='0.6'; }
     else { sp.textContent='☆'; sp.style.color='rgba(255,255,255,0.32)'; }
     starsDiv.appendChild(sp);
   }
 
   const qrText = buildQRText(meta, values);
-  const dataURL = generateQRDataURL(qrText, 420);
+  const qrDataURL = generateQRDataURL(qrText, 420);
   const qrImg = document.createElement('img');
-  qrImg.src = dataURL;
-  qrImg.style.width = '420px';
-  qrImg.style.height = '420px';
-  qrImg.style.marginTop = '20px';
+  qrImg.src = qrDataURL;
+  qrImg.style.width='420px'; qrImg.style.height='420px'; qrImg.style.marginTop='20px';
   card.querySelector('#qrHolder').appendChild(qrImg);
 
   await waitForImages(card);
 
-  try {
+  try{
     const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
     canvas.toBlob(function(blob){
-      if(!blob){ alert('Export failed.'); return; }
+      if(!blob){ alert('Export failed'); return; }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.date}.png`;
+      a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.dateFormatted}.png`;
       document.body.appendChild(a);
       a.click();
       setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 900);
@@ -374,7 +333,7 @@ async function buildVariantBAndExport(){
     console.error('Export error', err);
     alert('Error generating image: ' + (err && err.message ? err.message : err));
   } finally {
-    renderArea.innerHTML = '';
+    renderArea.innerHTML='';
   }
 }
 
