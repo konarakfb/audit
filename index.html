@@ -86,9 +86,9 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
 
   <!-- LOCATION -->
   <div class="location-card">
-    <div><label>Building</label><br><input id="building"></div>
-    <div><label>Floor</label><br><input id="floor"></div>
-    <div><label>Counter</label><br><input id="counter"></div>
+    <div><label>Building</label><br><input id="building" placeholder="Building name"></div>
+    <div><label>Floor</label><br><input id="floor" placeholder="Floor number"></div>
+    <div><label>Counter</label><br><input id="counter" placeholder="Counter name/number"></div>
     <div><label>Date</label><br><input type="date" id="date"></div>
     <div><button id="btnReset" class="btn ghost small">Reset</button></div>
   </div>
@@ -173,86 +173,98 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
   let questionsGrid, totalScoreEl, percentageDisplayEl, ratingStarsEl, ratingValueEl;
   let dateEl, buildingEl, floorEl, counterEl;
   let btnSaveLocal, btnLoadLocal, btnClearLocal, btnExportCSV, btnExportImage, btnDownload, btnReset;
-  let entriesBody, renderArea;
+  let entriesBody, renderArea, modalBackdrop;
 
-  function escapeHTML(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escapeHTML(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
   function composeAnswers(values){
+    if(!values) return '';
     return QUESTIONS.map(q=>`${q.text.replace('?','')}: ${values[q.key]}`).join(' • ');
   }
 
   function waitForImages(el){
-    const imgs = [...el.querySelectorAll("img")];
-    return Promise.all(imgs.map(img => new Promise(res => img.complete ? res() : (img.onload = img.onerror = res))));
+    const imgs = Array.from(el.querySelectorAll('img'));
+    return Promise.all(imgs.map(img => new Promise(res => {
+      if(img.complete) return res();
+      img.onload = img.onerror = res;
+    })));
   }
 
-  function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_'); }
+  function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_').slice(0,64); }
 
   /* Render question cards */
   function renderQuestionCards(){
     questionsGrid.innerHTML = '';
     QUESTIONS.forEach(q=>{
-      questionsGrid.innerHTML += `
-        <div class="qcard">
-          <div>
-            <img src="https://img.icons8.com/fluency/48/000000/checklist.png" style="height:30px;width:30px;margin-right:8px;">
-            ${escapeHTML(q.text)}
-          </div>
-          <select class="form-control" data-key="${q.key}" style="margin-top:8px">
+      const card = document.createElement('div');
+      card.className = 'qcard';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <img src="https://img.icons8.com/fluency/48/000000/checklist.png" alt="" style="height:30px;width:30px;">
+          <div style="font-weight:600">${escapeHTML(q.text)}</div>
+        </div>
+        <div style="margin-top:8px">
+          <select class="form-control" data-key="${q.key}">
             <option>Yes</option>
             <option>No</option>
           </select>
-          <div style="margin-top:8px;font-size:12px;color:#777;">
-            ${q.negative ? 'Note: complaint (Yes) reduces score.' : ''}
-          </div>
-        </div>`;
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:#666">${q.negative ? 'Note: complaint (Yes) reduces score.' : ''}</div>
+      `;
+      questionsGrid.appendChild(card);
     });
-    document.querySelectorAll('.form-control').forEach(s=>s.onchange=computeAndRenderScore);
+    document.querySelectorAll('.form-control').forEach(el => el.addEventListener('change', computeAndRenderScore));
   }
 
-  /* Scoring logic */
+  /* Scoring */
   function computeAndRenderScore(){
     const values = {};
     QUESTIONS.forEach(q=>{
-      values[q.key] = document.querySelector(`select[data-key="${q.key}"]`).value;
+      const sel = document.querySelector(`select[data-key="${q.key}"]`);
+      values[q.key] = sel ? sel.value : 'No';
     });
 
     let total = 0;
     QUESTIONS.forEach(q=>{
-      const ans = values[q.key].toUpperCase();
-      total += q.negative ? (ans === "NO" ? 10 : 0) : (ans === "YES" ? 10 : 0);
+      const ans = (values[q.key] || '').toUpperCase();
+      if(q.negative) total += (ans === 'NO' ? 10 : 0);
+      else total += (ans === 'YES' ? 10 : 0);
     });
 
-    const percentage = (total/120)*100;
-    const rating = (percentage/100)*5;
-    totalScoreEl.textContent = `${total} / 120`;
-    percentageDisplayEl.textContent = `${percentage.toFixed(1)}%`;
-    ratingValueEl.textContent = `${rating.toFixed(1)} / 5`;
+    const maxScore = QUESTIONS.length * 10;
+    const percentage = maxScore ? (total / maxScore) * 100 : 0;
+    const rawRating = (percentage / 100) * 5;
 
-    renderStars(rating);
-    return { total, percentage, rating, values };
+    totalScoreEl.textContent = `${total} / ${maxScore}`;
+    percentageDisplayEl.textContent = `${percentage.toFixed(1)}%`;
+    ratingValueEl.textContent = `${(Math.round(rawRating*10)/10).toFixed(1)} / 5`;
+
+    renderStars(rawRating);
+
+    return { total, percentage, rating: rawRating, values };
   }
 
-  function renderStars(r){
-    ratingStarsEl.innerHTML='';
-    const full = Math.floor(r);
-    const half = r - full >= 0.5;
-
+  function renderStars(rawRating){
+    ratingStarsEl.innerHTML = '';
+    const full = Math.floor(rawRating);
+    const half = (rawRating - full) >= 0.5;
     for(let i=0;i<5;i++){
-      let s=document.createElement("span");
-      s.style.fontSize="20px"; s.style.marginRight="4px";
-      if(i < full){ s.textContent="★"; s.style.color="gold"; }
-      else if(i===full && half){ s.textContent="★"; s.style.color="gold"; s.style.opacity="0.6"; }
-      else{ s.textContent="☆"; s.style.color="#ccc"; }
+      const s = document.createElement('span');
+      s.style.fontSize='20px'; s.style.marginRight='4px';
+      if (i < full){ s.textContent = '★'; s.style.color='gold'; }
+      else if (i === full && half){ s.textContent = '★'; s.style.color='gold'; s.style.opacity='0.6'; }
+      else { s.textContent = '☆'; s.style.color = '#ddd'; }
       ratingStarsEl.appendChild(s);
     }
   }
 
-  /* Save / Load / Delete */
+  /* Local storage functions */
   function saveEntryLocal(){
     const { total, percentage, rating, values } = computeAndRenderScore();
     const entry = {
-      id:'e'+Date.now(),
+      id: 'e_' + Date.now(),
       building: buildingEl.value.trim(),
       floor: floorEl.value.trim(),
       counter: counterEl.value.trim(),
@@ -261,139 +273,182 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
       total, percentage, rating,
       timestamp: new Date().toISOString()
     };
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     arr.push(entry);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
     loadEntriesToUI();
-    alert("Saved.");
+    alert('Entry saved locally.');
   }
 
   function loadEntriesToUI(){
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-    entriesBody.innerHTML='';
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    entriesBody.innerHTML = '';
     arr.slice().reverse().forEach(e=>{
-      entriesBody.innerHTML += `
-        <tr>
-          <td>${e.date}</td>
-          <td>${escapeHTML(e.building)}</td>
-          <td>${escapeHTML(e.floor)}</td>
-          <td>${escapeHTML(e.counter)}</td>
-          <td>${e.total}</td>
-          <td>${e.percentage.toFixed(1)}%</td>
-          <td>${e.rating.toFixed(1)} / 5</td>
-          <td>
-            <button class="btn small ghost" onclick="loadEntry('${e.id}')">Load</button>
-            <button class="btn small ghost" onclick="deleteEntry('${e.id}')">Delete</button>
-          </td>
-        </tr>`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${e.date}</td>
+        <td>${escapeHTML(e.building)}</td>
+        <td>${escapeHTML(e.floor)}</td>
+        <td>${escapeHTML(e.counter)}</td>
+        <td>${e.total}</td>
+        <td>${(e.percentage||0).toFixed(1)}%</td>
+        <td>${(Math.round((e.rating||0)*10)/10).toFixed(1)} / 5</td>
+        <td>
+          <button class="btn small ghost" onclick='window.__konarak_load("${e.id}")'>Load</button>
+          <button class="btn small ghost" onclick='window.__konarak_delete("${e.id}")'>Delete</button>
+        </td>`;
+      entriesBody.appendChild(tr);
     });
   }
 
-  window.loadEntry = function(id){
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  function loadEntry(id){
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const e = arr.find(x=>x.id===id);
-    if(!e) return;
-
-    buildingEl.value=e.building;
-    floorEl.value=e.floor;
-    counterEl.value=e.counter;
-    dateEl.value=e.date;
-
-    Object.entries(e.answers).forEach(([k,v])=>{
-      const sel=document.querySelector(`select[data-key="${k}"]`);
-      if(sel) sel.value=v;
+    if(!e) return alert('Entry not found');
+    buildingEl.value = e.building;
+    floorEl.value = e.floor;
+    counterEl.value = e.counter;
+    dateEl.value = e.date;
+    Object.keys(e.answers).forEach(k=>{
+      const sel = document.querySelector(`select[data-key="${k}"]`);
+      if(sel) sel.value = e.answers[k] === undefined ? 'No' : (e.answers[k].charAt(0).toUpperCase() + e.answers[k].slice(1).toLowerCase());
     });
-
     computeAndRenderScore();
-    window.scrollTo(0,0);
-  };
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
 
-  window.deleteEntry = function(id){
-    if(!confirm("Delete entry?")) return;
-    let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+  function deleteEntry(id){
+    if(!confirm('Delete this entry?')) return;
+    let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     arr = arr.filter(x=>x.id!==id);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
     loadEntriesToUI();
-  };
+  }
+
+  window.__konarak_load = loadEntry;
+  window.__konarak_delete = deleteEntry;
 
   function clearLocalEntries(){
-    if(confirm("Clear all entries?")){
-      localStorage.removeItem(STORAGE_KEY);
-      loadEntriesToUI();
-    }
+    if(!confirm('Clear all saved entries locally?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    loadEntriesToUI();
   }
 
-  /* CSV */
+  /* CSV export */
   function exportCSV(){
-    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-    if(!arr.length) return alert("No data");
-
-    const headers = ["id","date","building","floor","counter","total","percentage","rating","timestamp"];
-    let lines=[headers.join(",")];
-
-    arr.forEach(e=>{
-      lines.push(headers.map(h=>JSON.stringify(e[h]??"")).join(","));
+    const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if(!arr.length) return alert('No data');
+    const headers = ['id','date','building','floor','counter','total','percentage','rating','timestamp'];
+    const lines = [headers.join(',')];
+    arr.forEach(r=>{
+      const row = headers.map(h=>JSON.stringify(r[h] ?? '')).join(',');
+      lines.push(row);
     });
-
-    const blob=new Blob([lines.join("\n")],{type:"text/csv"});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);
-    a.download="konarak_audit.csv";
-    a.click();
+    const blob = new Blob([lines.join('\n')],{type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'konarak_audit.csv';
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 600);
   }
 
-  /* Reset */
   function resetForm(){
-    buildingEl.value="";
-    floorEl.value="";
-    counterEl.value="";
-    dateEl.value=new Date().toISOString().slice(0,10);
-    document.querySelectorAll(".form-control").forEach(s=>s.value="Yes");
+    buildingEl.value=''; floorEl.value=''; counterEl.value='';
+    dateEl.value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
     computeAndRenderScore();
   }
 
-  /* Modal */
-  function openModal(){ modalBackdrop.style.display="flex"; }
-  function closeModal(){ modalBackdrop.style.display="none"; }
+  /* Modal & Image generation */
+  function openModal(){ modalBackdrop.style.display = 'flex'; }
+  function closeModal(){ modalBackdrop.style.display = 'none'; }
 
-  window.selectVariant=function(v){
-    closeModal();
-    setTimeout(()=>generateHDImage(v),100);
-  };
+  function selectVariant(variant){
+    setTimeout(()=>{
+      closeModal();
+      generateHDImage(variant);
+    }, 120);
+  }
 
-  /* Image Generation */
   async function generateHDImage(variant){
+    // Always read live values from inputs immediately
+    const counterVal = (counterEl.value || '').trim();
+    const buildingVal = (buildingEl.value || '').trim();
+    const floorVal = (floorEl.value || '').trim();
+    const dateVal = (dateEl.value && dateEl.value.trim()) ? dateEl.value.trim() : new Date().toISOString().slice(0,10);
+
     const { total, percentage, rating, values } = computeAndRenderScore();
 
     const meta = {
-      building: buildingEl.value || "—",
-      floor: floorEl.value || "—",
-      counter: counterEl.value || "—",
-      date: dateEl.value,
+      building: buildingVal || '—',
+      floor: floorVal || '—',
+      counter: counterVal || '—',
+      date: dateVal,
       score: total,
       percentage,
-      rating: Number(rating.toFixed(1))
+      rating: Math.round(rating * 10) / 10
     };
 
-    renderArea.innerHTML="";
+    renderArea.innerHTML = '';
 
-    /* ---------------- VARIANT B (UPDATED WITH SEAL) ---------------- */
-    if(variant==="B"){
-      renderArea.style.width="1080px";
-      renderArea.style.height="1920px";
+    /* Variant A (landscape) */
+    if(variant === 'A'){
+      renderArea.style.width = '1920px'; renderArea.style.height = '1080px';
+      const card = document.createElement('div');
+      card.style.width='1900px'; card.style.height='1040px'; card.style.margin='10px auto';
+      card.style.borderRadius='20px'; card.style.padding='48px'; card.style.boxSizing='border-box';
+      card.style.background='linear-gradient(180deg,#fffdf8,#fffaf5)'; card.style.border='8px solid #f2e6c9'; card.style.boxShadow='0 18px 48px rgba(0,0,0,0.12)';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><img src="logo.png" style="height:80px" onerror="this.style.display='none'"></div>
+          <div style="text-align:right"><div style="font-size:28px;font-weight:800">Stall Audit Rating Certificate</div><div style="color:#556;text-align:right">Konarak Food & Beverages</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:30px">
+          <div style="width:62%">
+            <div style="font-size:20px">Counter: <strong style="font-size:24px">${escapeHTML(meta.counter)}</strong></div>
+            <div style="margin-top:12px">Building: <strong>${escapeHTML(meta.building)}</strong> • Floor: <strong>${escapeHTML(meta.floor)}</strong> • Date: <strong>${escapeHTML(meta.date)}</strong></div>
+            <div style="margin-top:18px"><strong>Remarks</strong><div style="margin-top:8px;padding:12px;background:#fff;border-radius:8px;border:1px solid rgba(0,0,0,0.04)">${composeAnswers(values)}</div></div>
+          </div>
+          <div style="width:34%;text-align:center;background:linear-gradient(180deg,#fff8eb,#fff0d1);padding:16px;border-radius:12px">
+            <div style="font-size:14px;color:#666">Score</div>
+            <div style="font-size:42px;font-weight:900;margin-top:6px">${meta.score} / 120</div>
+            <div style="margin-top:8px;font-size:18px;color:#445">${meta.percentage.toFixed(1)}%</div>
+            <div id="cardStars" style="margin-top:12px"></div>
+            <div style="margin-top:8px;color:#666">${meta.rating.toFixed(1)} / 5</div>
+          </div>
+        </div>
+      `;
+      renderArea.appendChild(card);
+      const starsDiv = card.querySelector('#cardStars');
+      const full = Math.floor(meta.rating); const half = (meta.rating - full) >= 0.5;
+      for(let i=0;i<5;i++){
+        const sp = document.createElement('span');
+        sp.style.fontSize='28px'; sp.style.margin='2px';
+        if(i < full){ sp.textContent='★'; sp.style.color='gold'; }
+        else if(i === full && half){ sp.textContent='★'; sp.style.color='gold'; sp.style.opacity='0.6'; }
+        else { sp.textContent='☆'; sp.style.color='#ddd'; }
+        starsDiv.appendChild(sp);
+      }
+    }
 
-      const card=document.createElement("div");
-      card.style.width="1080px";
-      card.style.height="1920px";
-      card.style.padding="80px 60px";
-      card.style.boxSizing="border-box";
-      card.style.background="linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)";
-      card.style.color="#fff";
-      card.style.display="flex";
-      card.style.flexDirection="column";
-      card.style.alignItems="center";
-      card.style.position="relative";
-      card.style.overflow="hidden";
+    /* Variant B (vertical) — full cover, reads live inputs, includes seal */
+    else if(variant === 'B'){
+      renderArea.style.width = '1080px';
+      renderArea.style.height = '1920px';
+
+      const card = document.createElement('div');
+      card.style.width = '1080px';
+      card.style.height = '1920px';
+      card.style.margin = '0';
+      card.style.padding = '80px 60px';
+      card.style.boxSizing = 'border-box';
+      card.style.borderRadius = '0';
+      card.style.position = 'relative';
+
+      card.style.background = 'linear-gradient(180deg, #0a0f24, #1e3a8a, #4f46e5)';
+      card.style.color = '#fff';
+      card.style.display = 'flex';
+      card.style.flexDirection = 'column';
+      card.style.alignItems = 'center';
+      card.style.justifyContent = 'flex-start';
+      card.style.overflow = 'hidden';
 
       card.innerHTML = `
         <div style="text-align:center;">
@@ -418,7 +473,7 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
           </div>
         </div>
 
-        <!-- SEAL IMAGE -->
+        <!-- SEAL IMAGE (center-bottom, plain) -->
         <div style="position:absolute;bottom:80px;left:0;right:0;text-align:center;">
           <img src="seel.png" style="height:240px;" onerror="this.style.display='none'">
         </div>
@@ -427,83 +482,124 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
       renderArea.appendChild(card);
 
       // Stars
-      const vStars=card.querySelector("#vStars");
-      const full=Math.floor(meta.rating);
-      const half=(meta.rating-full)>=0.5;
+      const vStars = card.querySelector('#vStars');
+      const full = Math.floor(meta.rating);
+      const half = (meta.rating - full) >= 0.5;
       for(let i=0;i<5;i++){
-        let s=document.createElement("span");
-        s.style.fontSize="70px"; s.style.margin="6px";
-        if(i<full){ s.textContent="★"; s.style.color="gold"; }
-        else if(i===full && half){ s.textContent="★"; s.style.color="gold"; s.style.opacity="0.6"; }
-        else{ s.textContent="☆"; s.style.color="rgba(255,255,255,0.3)"; }
+        const s = document.createElement('span');
+        s.style.fontSize = '70px';
+        s.style.margin = '6px';
+        if(i < full){
+          s.textContent = '★'; s.style.color = 'gold';
+        } else if(i === full && half){
+          s.textContent = '★'; s.style.color = 'gold'; s.style.opacity = '0.6';
+        } else {
+          s.textContent = '☆'; s.style.color = 'rgba(255,255,255,0.3)';
+        }
         vStars.appendChild(s);
       }
     }
 
-    /* ---------------- VARIANT A & C unchanged ---------------- */
-    else {
-      alert("This file focuses on Variant B. If you want A/C updated also, tell me.");
+    /* Variant C (minimal) */
+    else if(variant === 'C'){
+      renderArea.style.width = '1600px'; renderArea.style.height = '900px';
+      const card = document.createElement('div');
+      card.style.width='1560px'; card.style.height='860px'; card.style.margin='20px auto'; card.style.borderRadius='18px'; card.style.padding='28px'; card.style.boxSizing='border-box';
+      card.style.background='#fff'; card.style.border='2px solid #f1efe9'; card.style.boxShadow='0 18px 46px rgba(0,0,0,0.06)';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><img src="logo.png" style="height:70px" onerror="this.style.display='none'"><div style="font-size:20px;font-weight:800;margin-top:6px">Konarak Food & Beverages</div></div>
+          <div style="text-align:right"><div style="font-size:14px;color:#6b7280">Date</div><div style="font-size:18px">${escapeHTML(meta.date)}</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:36px">
+          <div><div style="font-size:14px;color:#6b7280">Counter</div><div style="font-size:30px;font-weight:800">${escapeHTML(meta.counter)}</div><div style="margin-top:8px;color:#475569">${escapeHTML(meta.building)} • Floor ${escapeHTML(meta.floor)}</div></div>
+          <div style="text-align:center"><div style="font-size:14px;color:#6b7280">Score</div><div style="font-size:46px;font-weight:900">${meta.score} / 120</div><div style="margin-top:8px;color:#475569">${meta.percentage.toFixed(1)}%</div><div style="margin-top:8px;font-size:16px;color:#6b7280">${meta.rating.toFixed(1)} / 5</div><div id="ctStars" style="margin-top:8px"></div></div>
+        </div>
+        <div style="margin-top:28px;padding:12px;background:#fbfbfb;border-radius:10px">${composeAnswers(values)}</div>
+      `;
+      renderArea.appendChild(card);
+      const starsDiv = renderArea.querySelector('#ctStars');
+      if(starsDiv){
+        const rawRating = meta.rating; const full = Math.floor(rawRating); const half = (rawRating - full) >= 0.5;
+        for(let i=0;i<5;i++){ const sp=document.createElement('span'); sp.textContent=(i<full)?'★':((i===full && half)?'★':'☆'); sp.style.color=(i<full || (i===full && half)) ? 'gold' : '#ddd'; sp.style.opacity = ((i===full && half)?'0.6':'1'); sp.style.fontSize='22px'; sp.style.marginRight='4px'; starsDiv.appendChild(sp); }
+      }
+    }
+
+    // Safety
+    if(!renderArea.firstChild){
+      alert('Rendering failed: no content to export.');
       return;
     }
 
-    /* EXPORT LOGIC */
-    await waitForImages(renderArea);
+    try{
+      await waitForImages(renderArea);
+      const target = renderArea.firstChild;
+      const options = { backgroundColor: null, scale: 2, useCORS: true };
+      const canvas = await html2canvas(target, options);
 
-    const cardEl = renderArea.firstChild;
-    const canvas = await html2canvas(cardEl,{scale:2,backgroundColor:null,useCORS:true});
+      canvas.toBlob(function(blob){
+        if(!blob){ alert('Export failed (no blob)'); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.date}.png`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 800);
+      }, 'image/png', 1.0);
 
-    canvas.toBlob(blob=>{
-      const a=document.createElement("a");
-      a.href=URL.createObjectURL(blob);
-      a.download=`konarak_rating_${safeFilename(meta.counter)}_${meta.date}.png`;
-      a.click();
-    });
+    } catch(err){
+      alert('Error generating image: ' + (err && err.message ? err.message : err));
+      console.error(err);
+    } finally {
+      renderArea.innerHTML = '';
+    }
   }
 
-  /* Init */
-  document.addEventListener("DOMContentLoaded",()=>{
+  /* Wiring & init */
+  document.addEventListener('DOMContentLoaded', () => {
+    questionsGrid = document.getElementById('questionsGrid');
+    totalScoreEl = document.getElementById('totalScore');
+    percentageDisplayEl = document.getElementById('percentageDisplay');
+    ratingStarsEl = document.getElementById('ratingStars');
+    ratingValueEl = document.getElementById('ratingValue');
 
-    questionsGrid=document.getElementById("questionsGrid");
-    totalScoreEl=document.getElementById("totalScore");
-    percentageDisplayEl=document.getElementById("percentageDisplay");
-    ratingStarsEl=document.getElementById("ratingStars");
-    ratingValueEl=document.getElementById("ratingValue");
+    dateEl = document.getElementById('date');
+    buildingEl = document.getElementById('building');
+    floorEl = document.getElementById('floor');
+    counterEl = document.getElementById('counter');
 
-    buildingEl=document.getElementById("building");
-    floorEl=document.getElementById("floor");
-    counterEl=document.getElementById("counter");
-    dateEl=document.getElementById("date");
+    btnSaveLocal = document.getElementById('btnSaveLocal');
+    btnLoadLocal = document.getElementById('btnLoadLocal');
+    btnClearLocal = document.getElementById('btnClearLocal');
+    btnExportCSV = document.getElementById('btnExportCSV');
+    btnExportImage = document.getElementById('btnExportImage');
+    btnDownload = document.getElementById('btnDownload');
+    btnReset = document.getElementById('btnReset');
 
-    btnSaveLocal=document.getElementById("btnSaveLocal");
-    btnLoadLocal=document.getElementById("btnLoadLocal");
-    btnClearLocal=document.getElementById("btnClearLocal");
-    btnExportCSV=document.getElementById("btnExportCSV");
-    btnExportImage=document.getElementById("btnExportImage");
-    btnDownload=document.getElementById("btnDownload");
-    btnReset=document.getElementById("btnReset");
-
-    entriesBody=document.getElementById("entriesBody");
-    renderArea=document.getElementById("renderArea");
+    entriesBody = document.getElementById('entriesBody');
+    renderArea = document.getElementById('renderArea');
+    modalBackdrop = document.getElementById('modalBackdrop');
 
     renderQuestionCards();
-    document.querySelectorAll(".form-control").forEach(s=>s.value="Yes");
+    document.querySelectorAll('.form-control').forEach(s=>s.value='Yes');
 
-    btnSaveLocal.onclick=saveEntryLocal;
-    btnLoadLocal.onclick=loadEntriesToUI;
-    btnClearLocal.onclick=clearLocalEntries;
+    if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
+    if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
+    if(btnClearLocal) btnClearLocal.addEventListener('click', clearLocalEntries);
+    if(btnExportCSV) btnExportCSV.addEventListener('click', exportCSV);
 
-    btnExportCSV.onclick=exportCSV;
-    btnExportImage.onclick=openModal;
-    btnDownload.onclick=openModal;
-    btnReset.onclick=resetForm;
+    if(btnExportImage) btnExportImage.addEventListener('click', openModal);
+    if(btnDownload) btnDownload.addEventListener('click', openModal);
 
-    dateEl.value=new Date().toISOString().slice(0,10);
+    if(btnReset) btnReset.addEventListener('click', resetForm);
+
+    dateEl.value = new Date().toISOString().slice(0,10);
     computeAndRenderScore();
     loadEntriesToUI();
   });
 
 })();
 </script>
-
 </body>
 </html>
