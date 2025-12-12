@@ -179,11 +179,14 @@ function computeAndRenderScore(){
   return { total, percentage, rating, values };
 }
 
-function buildQRText(meta, answers){
+  function buildQRText(meta, answers){
   let out = 'AUDIT-DATA:\n';
   out += `Stall: ${meta.counter}\n`;
+  out += `Building: ${meta.building}\n`;
+  out += `Floor: ${meta.floor}\n`;
   out += `Score: ${meta.score}/120\n`;
   out += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
+
   QUESTIONS.forEach(q=>{
     const ans = (answers[q.key] || 'No').toUpperCase();
     let score = 0;
@@ -191,9 +194,13 @@ function buildQRText(meta, answers){
     else score = ans === 'YES' ? 10 : 0;
     out += `${q.key}: ${score}/10\n`;
   });
-  out += `\nRated On: ${meta.date}\nKonarak Food Services`;
+
+  out += `\nRated On: ${meta.date}\n`;
+  out += `Konarak Food Services\n`;
+
   return out;
 }
+
 
 function generateQRDataURL(text, size=380){
   const qr = new QRious({ value: text, size: size, level: 'H' });
