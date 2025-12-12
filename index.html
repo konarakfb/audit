@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Konarak — Stall Audit (Final)</title>
 
-<!-- html2canvas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
@@ -23,8 +22,6 @@ body{
   background: var(--bg1);
   color:#0b1220;
 }
-
-/* Header */
 .header{
   height:64px;background:#0b1220;color:#fff;display:flex;align-items:center;
   justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:40;
@@ -36,28 +33,26 @@ body{
 .location-card{background:var(--card);padding:14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
 .location-card input{padding:8px 10px;border-radius:8px;border:1px solid #e6eefc;}
 
-/* Buttons */
 .btn{background:#1665ff;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
 .btn.ghost{background:transparent;color:#0b1220;border:1px solid #e6eefc}
 .small{padding:7px 10px;font-size:13px}
 
-/* Question cards */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:18px}
 .qcard{background:white;padding:18px;border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,0.06)}
 select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid #eef3fb;background:#fff;font-size:14px}
 
-/* Summary panel */
 .summary-panel{display:flex;gap:18px;background:white;padding:14px;border-radius:12px;box-shadow:var(--shadow)}
 .summary-item .num{font-size:18px;font-weight:700}
 
-/* Actions */
 .actions-card{width:300px;background:white;padding:16px;border-radius:12px;box-shadow:var(--shadow)}
-
-/* Saved entries */
 .table-card{margin-top:20px;background:white;padding:16px;border-radius:12px;box-shadow:var(--shadow)}
 
-/* Render area (hidden) */
 #renderArea{position:fixed;top:0;left:0;width:1080px;height:1920px;opacity:0;pointer-events:none;z-index:-1;}
+/* small responsive tweak for mobile */
+@media (max-width:640px){
+  .location-card{flex-direction:column;align-items:stretch}
+  .actions-card{width:100%}
+}
 </style>
 </head>
 <body>
@@ -72,7 +67,6 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
 
 <div class="container">
 
-  <!-- LOCATION -->
   <div class="location-card">
     <div><label>Building</label><br><input id="building" placeholder="Building"></div>
     <div><label>Floor</label><br><input id="floor" placeholder="Floor"></div>
@@ -81,10 +75,8 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
     <div><button id="btnReset" class="btn ghost small">Reset</button></div>
   </div>
 
-  <!-- QUESTIONS -->
   <div class="grid" id="questionsGrid"></div>
 
-  <!-- SUMMARY -->
   <div class="summary-panel" style="margin-top:20px;">
     <div>
       <div>Total Score</div>
@@ -103,7 +95,6 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
     </div>
   </div>
 
-  <!-- ACTIONS -->
   <div style="margin-top:20px;display:flex;gap:20px;">
     <div class="actions-card">
       <strong>Actions</strong><br><br>
@@ -113,7 +104,6 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
     </div>
   </div>
 
-  <!-- SAVED ENTRIES -->
   <div class="table-card">
     <strong>Saved Entries</strong>
     <table style="width:100%;margin-top:12px;border-collapse:collapse;">
@@ -124,14 +114,10 @@ select.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid 
 
 </div>
 
-<!-- Hidden render area -->
 <div id="renderArea"></div>
 
-<!-- ==========================
-     WORKING OFFLINE QR LIBRARY
-     ========================== -->
 <script>
-/* Fully working QR generator (compact adapted) */
+/* QR generator (self-contained, html2canvas-safe) */
 var QRCode;!function(o){function t(o){this.mode=u.MODE_8BIT_BYTE,this.data=o}function e(o,t){this.typeNumber=o,this.errorCorrectLevel=t,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]}function r(t,e){if(void 0===t.length)throw new Error(t.length+"/"+e);for(var r=0,n=0;n<t.length&&r<e;)r+=t[n].length,n++;if(r!=e)throw new Error(r+"/"+e)}function n(o,t){this.totalCount=o,this.dataCount=t}function i(){for(var o=0,t=0,e=arguments.length;t<e;t++)o+=arguments[t].byteLength;var r=new Uint8Array(o),n=0;for(t=0;t<e;t++)r.set(arguments[t],n),n+=arguments[t].byteLength;return r}function u(){}function f(o,t){var e=o<<8|t;return e}function a(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}function h(o){for(var t=o.length,e=0,r=0;r<t;r++)e+=o[r]*Math.pow(2,t-r-1);return e}t.prototype={getLength:function(){return this.data.length},write:function(o){for(var t=0,e=this.data.length;t<e;t++)o.put(this.data.charCodeAt(t),8)}},e.prototype={addData:function(o){var r=new t(o);this.dataList.push(r),this.dataCache=null},isDark:function(o,t){if(0>o||this.moduleCount<=o||0>t||this.moduleCount<=t)throw new Error(o+","+t);return this.modules[o][t]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1)},makeImpl:function(o){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var t=0,e=this.moduleCount;t<e;t++){this.modules[t]=new Array(this.moduleCount);for(var r=0;r<e;r++)this.modules[t][r]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.dataCache=this.createData(),this.mapData(this.dataCache,o)},setupPositionProbePattern:function(o,t){for(var e=-1;7>=e;e++)if(!(o+e<=-1||this.moduleCount<=o+e))for(var r=-1;7>=r;r++)t+r<=-1||this.moduleCount<=t+r||(this.modules[o+e][t+r]=e>=0&&6>=e&&(0==r||6==r)||r>=0&&6>=r&&(0==e||6==e)||e>=2&&4>=e&&r>=2&&4>=r?!0:!1)},setupTimingPattern:function(){for(var o=8,t=this.moduleCount-8,e=0;e<this.moduleCount-8;e++)null==this.modules[e][6]&&(this.modules[e][6]=e%2==0),null==this.modules[6][e]&&(this.modules[6][e]=e%2==0)},setupPositionAdjustPattern:function(){for(var o=u.getPatternPosition(this.typeNumber),t=0,e=o.length;t<e;t++)for(var r=0;r<e;r++){var n=o[t],i=o[r];if(null==this.modules[n][i])for(var f=-2;2>=f;f++)for(var a=-2;2>=a;a++)this.modules[n+f][i+a]=-2==f||2==f||-2==a||2==a||0==f&&0==a?!0:!1}},mapData:function(o,t){for(var e=-1,r=this.moduleCount-1,n=7,i=this.moduleCount-1;i>0;i-=2)for(6==i&&i--;;){for(var f=0;2>f;f++){if(null==this.modules[i-f][r]){var a=!1;o.length>e+1&&(a=((o[++e]>>>n)&1)==1),this.modules[i-f][r]=a}if(--n<0&&(n=7),0==f&&--r<0)return}if(0>i)break}},createData:function(){var o=new Array,n=0;this.dataList.forEach(function(t){n+=t.getLength()}),r(this.dataList,n);for(var i=new Array(n),u=0,f=0;f<this.dataList.length;f++)for(var a=this.dataList[f],h=0;h<a.getLength();h++)i[u++]=a.data.charCodeAt(h);return i}},n.getRSBlocks=function(o,t){return[new n(26,9)]},u.MODE_NUMBER=1,u.MODE_ALPHA_NUM=2,u.MODE_8BIT_BYTE=4,u.MODE_KANJI=8,u.getPatternPosition=function(){return[]},u.getErrorCorrectPolynomial=function(){return[]},u.getLengthInBits=function(){return[]},u.getLostPoint=function(){return 0},o.QRCode=e}(this);
 
 function generateQRCodeCanvas(text, size=320){
@@ -162,9 +148,6 @@ function generateQRCodeCanvas(text, size=320){
 }
 </script>
 
-<!-- ==========================
-     MAIN APP LOGIC
-     ========================== -->
 <script>
 (() => {
 
@@ -200,7 +183,6 @@ function waitForImages(el){
 }
 function safeFilename(s){return (s||"counter").replace(/[^\w\-]/g,"_").slice(0,50);}
 
-/* Render Questions */
 function renderQuestionCards(){
   questionsGrid.innerHTML="";
   QUESTIONS.forEach(q=>{
@@ -226,7 +208,6 @@ function renderQuestionCards(){
   document.querySelectorAll(".form-control").forEach(s=>s.addEventListener("change",computeAndRenderScore));
 }
 
-/* Scoring */
 function computeAndRenderScore(){
   const vals={};
   QUESTIONS.forEach(q=>{
@@ -266,7 +247,6 @@ function renderStars(r){
   }
 }
 
-/* Local Storage */
 function saveEntryLocal(){
   const { total, percent, rating, values } = computeAndRenderScore();
   const e = {
@@ -326,24 +306,20 @@ window.__loadEntry = function(id){
   window.scrollTo(0,0);
 };
 
-
 window.__deleteEntry = function(id){
   if(!confirm("Delete entry?")) return;
-  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  arr = arr.filter(x => x.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  let arr=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+  arr=arr.filter(x=>x.id!==id);
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));
   loadEntriesToUI();
 };
 
-/* FIX: This function was missing — now added */
 function clearLocalEntries(){
   localStorage.removeItem(STORAGE_KEY);
   loadEntriesToUI();
   alert("All saved entries cleared.");
 }
- 
 
-/* Build QR text & Variant B export (with date under stall info) */
 function buildQRText(meta, answers){
   const lines = [];
   lines.push(`Stall: ${meta.counter}`);
@@ -431,7 +407,6 @@ async function buildVariantBAndExport(){
 
   renderArea.appendChild(card);
 
-  // stars
   const vStars = card.querySelector('#vStars');
   const full = Math.floor(meta.rating);
   const half = (meta.rating - full) >= 0.5;
@@ -444,7 +419,6 @@ async function buildVariantBAndExport(){
     vStars.appendChild(s);
   }
 
-  // QR
   const qrText = buildQRText(meta, values);
   const qrCanvas = generateQRCodeCanvas(qrText, 320);
   const qrImg = document.createElement('img');
@@ -476,7 +450,6 @@ async function buildVariantBAndExport(){
   }
 }
 
-/* Init wiring */
 document.addEventListener('DOMContentLoaded', () => {
   questionsGrid = document.getElementById('questionsGrid');
   totalScoreEl = document.getElementById('totalScore');
