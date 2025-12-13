@@ -394,27 +394,24 @@ async function generateHDCard(){
   }
 
   /* QR */
-  /* QR with white background box */
+
 const qrText = buildQRText(meta, values);
 const qr = new QRious({ value: qrText, size: 1680, level: "H" });
-
-const box = document.createElement("div");
-box.style.background = "#ffffff";
-box.style.padding = "36px";
-box.style.borderRadius = "12px";
-box.style.display = "inline-block";
-box.style.boxShadow = "0 12px 30px rgba(0,0,0,0.25)";
 
 const img = document.createElement("img");
 img.src = qr.toDataURL();
 img.style.width = "840px";
 img.style.height = "840px";
 img.style.display = "block";
-
-box.appendChild(img);
+img.style.background = "#ffffff";        // keeps QR readable
+img.style.padding = "12px";              // quiet zone
+img.style.border = "8px solid #ffffff";  // WHITE BORDER ONLY
+img.style.borderRadius = "8px";          // subtle rounding
+img.style.boxSizing = "border-box";
 
 const holder = card.querySelector("#qrHolder");
-holder.appendChild(box);
+holder.appendChild(img);
+
 
 
   await waitForImages(card);
