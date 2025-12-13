@@ -2,168 +2,187 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>QR Text Decoder Platform</title>
+<title>Konarak | QR Text Decoder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- QR Decode Library -->
+<!-- QR Decoder -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
 <style>
 :root{
-  --bg:#f4f6fb;
+  --bg:#f2f4f8;
   --card:#ffffff;
-  --primary:#0f172a;
-  --accent:#2563eb;
+  --brand:#0b1220;
+  --accent:#f59e0b;
+  --text:#0f172a;
   --muted:#6b7280;
   --border:#e5e7eb;
+  --success:#16a34a;
+  --error:#dc2626;
 }
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Segoe UI, Arial, sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   background:var(--bg);
-  color:var(--primary);
+  color:var(--text);
 }
-header{
-  background:var(--primary);
+.header{
+  background:var(--brand);
   color:#fff;
-  padding:14px 18px;
+  padding:16px;
+  text-align:center;
+}
+.header h1{
+  margin:0;
   font-size:18px;
-  font-weight:600;
+  font-weight:800;
+  letter-spacing:.6px;
+}
+.header span{
+  font-size:12px;
+  color:#facc15;
 }
 .container{
   max-width:520px;
-  margin:20px auto;
+  margin:auto;
   padding:14px;
 }
 .card{
   background:var(--card);
-  border-radius:14px;
+  border-radius:16px;
   padding:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-  margin-bottom:16px;
+  box-shadow:0 8px 24px rgba(2,6,23,.08);
+  margin-bottom:14px;
 }
-h2{
-  font-size:16px;
+.card h2{
+  font-size:15px;
   margin:0 0 10px;
+  font-weight:700;
+}
+video{
+  width:100%;
+  border-radius:14px;
+  border:1px solid var(--border);
 }
 textarea{
   width:100%;
   min-height:70px;
-  border-radius:10px;
+  border-radius:12px;
   border:1px solid var(--border);
-  padding:10px;
+  padding:12px;
   font-size:14px;
+}
+input[type=file]{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px dashed var(--border);
+  background:#fafafa;
 }
 button{
   width:100%;
-  padding:12px;
   border:none;
-  border-radius:10px;
-  background:var(--accent);
-  color:#fff;
+  border-radius:14px;
+  padding:14px;
   font-size:15px;
-  font-weight:600;
+  font-weight:800;
   cursor:pointer;
   margin-top:10px;
 }
-button.secondary{
-  background:#111827;
-}
-video{
-  width:100%;
-  border-radius:12px;
-  border:1px solid var(--border);
-}
-.output{
+.btn-scan{background:var(--accent);color:#111827}
+.btn-decode{background:var(--brand);color:#fff}
+.result{
+  border-radius:14px;
+  padding:14px;
+  background:#f9fafb;
   border:1px dashed var(--border);
-  border-radius:12px;
-  padding:12px;
-  font-size:14px;
 }
 .row{
-  margin-bottom:6px;
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  border-bottom:1px solid #eef2f7;
+  font-size:14px;
 }
-.label{
-  color:var(--muted);
-  font-size:12px;
-}
-.value{
-  font-weight:600;
-}
-.error{
-  color:#dc2626;
-  font-weight:600;
-}
-.success{
-  color:#16a34a;
-  font-weight:600;
-}
-footer{
+.row:last-child{border-bottom:none}
+.label{color:var(--muted)}
+.value{font-weight:700;text-align:right}
+.success{color:var(--success);font-weight:800;margin-bottom:8px}
+.error{color:var(--error);font-weight:700}
+.footer{
   text-align:center;
   font-size:12px;
   color:var(--muted);
-  margin-top:10px;
+  padding:10px 0 20px;
 }
 </style>
 </head>
 
 <body>
-<header>QR Text Decoder Platform</header>
+
+<div class="header">
+  <h1>KONARAK</h1>
+  <span>QR Text Decoder Platform</span>
+</div>
 
 <div class="container">
 
   <!-- CAMERA SCAN -->
   <div class="card">
-    <h2>Scan QR (Text Only)</h2>
+    <h2>Scan QR Using Camera</h2>
     <video id="video" autoplay muted playsinline></video>
-    <button onclick="startScan()">Start Camera Scan</button>
+    <button class="btn-scan" onclick="startScan()">Start Camera Scan</button>
   </div>
 
-  <!-- MANUAL INPUT -->
+  <!-- UPLOAD IMAGE -->
+  <div class="card">
+    <h2>Upload QR Image</h2>
+    <input type="file" accept="image/*" onchange="scanImage(this)">
+  </div>
+
+  <!-- MANUAL TEXT -->
   <div class="card">
     <h2>Paste QR Text</h2>
     <textarea id="qrText" placeholder="Example: KONARAK|STALL|WAR144"></textarea>
-    <button class="secondary" onclick="decodeText()">Decode Text</button>
+    <button class="btn-decode" onclick="decodeText()">Decode Text</button>
   </div>
 
-  <!-- OUTPUT -->
+  <!-- RESULT -->
   <div class="card">
-    <h2>Decoded Result</h2>
-    <div id="result" class="output">No data decoded yet.</div>
+    <h2>Decoded Information</h2>
+    <div id="result" class="result">Waiting for QR input.</div>
   </div>
 
 </div>
 
-<footer>
-  Exact Text QR Decoder • Works without URL
-</footer>
+<div class="footer">
+  Konarak Food & Beverages • Official Verification
+</div>
 
 <script>
-const video = document.getElementById("video");
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
+const video=document.getElementById("video");
+const canvas=document.createElement("canvas");
+const ctx=canvas.getContext("2d");
 
 function startScan(){
-  navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
-    .then(stream=>{
-      video.srcObject = stream;
-      requestAnimationFrame(scanFrame);
-    })
-    .catch(()=>{
-      alert("Camera access denied");
-    });
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+  .then(stream=>{
+    video.srcObject=stream;
+    requestAnimationFrame(scanFrame);
+  })
+  .catch(()=>alert("Camera permission required"));
 }
 
 function scanFrame(){
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video,0,0,canvas.width,canvas.height);
-    const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-    const qr = jsQR(imageData.data, canvas.width, canvas.height);
+  if(video.readyState===video.HAVE_ENOUGH_DATA){
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    ctx.drawImage(video,0,0);
+    const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const qr=jsQR(img.data,canvas.width,canvas.height);
     if(qr){
-      document.getElementById("qrText").value = qr.data;
+      document.getElementById("qrText").value=qr.data;
       decodeText();
       stopCamera();
       return;
@@ -175,33 +194,46 @@ function scanFrame(){
 function stopCamera(){
   if(video.srcObject){
     video.srcObject.getTracks().forEach(t=>t.stop());
-    video.srcObject = null;
+    video.srcObject=null;
   }
 }
 
+function scanImage(input){
+  const file=input.files[0];
+  if(!file)return;
+  const img=new Image();
+  img.onload=function(){
+    canvas.width=img.width;
+    canvas.height=img.height;
+    ctx.drawImage(img,0,0);
+    const data=ctx.getImageData(0,0,canvas.width,canvas.height);
+    const qr=jsQR(data.data,canvas.width,canvas.height);
+    if(qr){
+      document.getElementById("qrText").value=qr.data;
+      decodeText();
+    }else{
+      document.getElementById("result").innerHTML=
+        `<div class="error">No QR code detected in image</div>`;
+    }
+  };
+  img.src=URL.createObjectURL(file);
+}
+
 function decodeText(){
-  const text = document.getElementById("qrText").value.trim();
-  const result = document.getElementById("result");
-
+  const text=document.getElementById("qrText").value.trim();
+  const result=document.getElementById("result");
   if(!text){
-    result.innerHTML = `<div class="error">No text provided</div>`;
+    result.innerHTML=`<div class="error">No QR text found</div>`;
     return;
   }
-
-  // Expected format: ORG|TYPE|CODE
-  const parts = text.split("|");
-
-  if(parts.length < 3){
-    result.innerHTML = `<div class="error">Invalid QR text format</div>`;
+  const parts=text.split("|");
+  if(parts.length<3){
+    result.innerHTML=`<div class="error">Invalid QR format</div>`;
     return;
   }
+  const org=parts[0],type=parts[1],code=parts[2];
 
-  const org = parts[0];
-  const type = parts[1];
-  const code = parts[2];
-
-  /* SAMPLE DATA LOOKUP (Replace later with DB / Sheet) */
-  const database = {
+  const db={
     "WAR144":{
       name:"Konarak – WAR144",
       rating:"4.5 / 5",
@@ -212,25 +244,23 @@ function decodeText(){
     }
   };
 
-  if(!database[code]){
-    result.innerHTML = `<div class="error">No record found for code: ${code}</div>`;
+  if(!db[code]){
+    result.innerHTML=`<div class="error">No record found for ${code}</div>`;
     return;
   }
 
-  const d = database[code];
-
-  result.innerHTML = `
-    <div class="success">Decoded Successfully</div>
-    <div class="row"><span class="label">Organization:</span> <span class="value">${org}</span></div>
-    <div class="row"><span class="label">Type:</span> <span class="value">${type}</span></div>
-    <div class="row"><span class="label">Code:</span> <span class="value">${code}</span></div>
-    <hr>
-    <div class="row"><span class="label">Name:</span> <span class="value">${d.name}</span></div>
-    <div class="row"><span class="label">Rating:</span> <span class="value">${d.rating}</span></div>
-    <div class="row"><span class="label">Hygiene:</span> <span class="value">${d.hygiene}</span></div>
-    <div class="row"><span class="label">Last Audit:</span> <span class="value">${d.audit}</span></div>
-    <div class="row"><span class="label">Status:</span> <span class="value">${d.status}</span></div>
-    <div class="row"><span class="label">Remarks:</span> <span class="value">${d.remarks}</span></div>
+  const d=db[code];
+  result.innerHTML=`
+    <div class="success">Verified Record</div>
+    <div class="row"><span class="label">Organization</span><span class="value">${org}</span></div>
+    <div class="row"><span class="label">Type</span><span class="value">${type}</span></div>
+    <div class="row"><span class="label">Code</span><span class="value">${code}</span></div>
+    <div class="row"><span class="label">Name</span><span class="value">${d.name}</span></div>
+    <div class="row"><span class="label">Rating</span><span class="value">${d.rating}</span></div>
+    <div class="row"><span class="label">Hygiene</span><span class="value">${d.hygiene}</span></div>
+    <div class="row"><span class="label">Last Audit</span><span class="value">${d.audit}</span></div>
+    <div class="row"><span class="label">Status</span><span class="value">${d.status}</span></div>
+    <div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>
   `;
 }
 </script>
