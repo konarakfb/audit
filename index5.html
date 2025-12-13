@@ -96,6 +96,9 @@ body{margin:0;font-family:"Segoe UI",sans-serif;background:var(--bg1);color:#0b1
 <script>
 const QUESTIONS = [
   { key: 'sales_report', text: 'Daily sales report submitted?' },
+
+  { key: 'weekly_checklist_report', text: 'Weekly checklist report submitted?' },
+
   { key: 'feedback_report', text: 'Daily feedback report submitted?' },
   { key: 'breakfast_on_time', text: 'Breakfast arranged on time (08:00)?' },
   { key: 'lunch_on_time', text: 'Lunch arranged on time (12:30)?' },
@@ -104,10 +107,11 @@ const QUESTIONS = [
   { key: 'staff_behaviour', text: 'Staff behaviour is good?' },
   { key: 'staff_hygiene', text: 'Staff hygiene is good?' },
   { key: 'stall_clean', text: 'Stall is clean and hygienic?' },
-  { key: 'food_complaint', text: 'Food quality complaints received?', negative: true },
-  { key: 'cbre_complaint', text: 'CBRE complaint received?', negative: true },
-  { key: 'cognizant_complaint', text: 'Cognizant complaint received?', negative: true }
+  { key: 'food_complaint', text: 'Food quality complaints received?' },
+  { key: 'cbre_complaint', text: 'CBRE complaint received?' },
+  { key: 'cognizant_complaint', text: 'Cognizant complaint received?' }
 ];
+
 const STORAGE_KEY = 'konarak_audit_entries_final';
 
 function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
