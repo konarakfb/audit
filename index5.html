@@ -1,1 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Konarak — Stall Audit (Final)</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+<style>
+:root{--bg1:linear-gradient(135deg,#eef2f3,#d9e4f5)}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",sans-serif;background:var(--bg1);color:#0b1220}
+.header{height:64px;background:#0b1220;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:40}
+.header .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+.header .brand img{height:36px;width:36px;background:#fff;border-radius:6px;padding:3px}
+.container{max-width:1200px;margin:28px auto;padding:0 18px}
+.location-card{background:white;padding:14px;border-radius:12px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,0.08)}
+.location-card input{padding:8px 10px;border-radius:8px;border:1px solid #d9d9d9}
+.btn{background:#1665ff;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn.small{padding:7px 10px;font-size:13px}
+.btn.ghost{background:transparent;color:#000;border:1px solid #d9d9d9}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:18px}
+.qcard{background:white;padding:18px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.06)}
+.form-control{width:100%;padding:10px;border-radius:10px;border:1px solid #d9d9d9;font-size:14px}
+.summary-panel{display:flex;gap:18px;background:white;padding:14px;border-radius:12px;margin-top:20px;box-shadow:0 10px 25px rgba(0,0,0,0.06)}
+.summary-item .num{font-size:18px;font-weight:700}
+.actions-card{width:300px;background:white;padding:16px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.06);margin-top:20px}
+.table-card{margin-top:20px;background:white;padding:16px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.06)}
+#renderArea{position:fixed;top:0;left:0;width:1080px;height:1920px;opacity:0;pointer-events:none;z-index:-1}
+@media (max-width:640px){.location-card{flex-direction:column;align-items:stretch}.actions-card{width:100%}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">
+    <img src="logo.png" onerror="this.style.display='none'">
+    Konarak — Stall Audit
+  </div>
+  <button id="btnDownload" class="btn small">Generate Rating Card</button>
+</div>
+
+<div class="container">
+
+  <div class="location-card">
+    <div><label>Building</label><br><input id="building" placeholder="Building"></div>
+    <div><label>Floor</label><br><input id="floor" placeholder="Floor"></div>
+    <div><label>Counter</label><br><input id="counter" placeholder="Stall / Counter"></div>
+    <div><label>Date</label><br><input type="date" id="date"></div>
+    <div><button id="btnReset" class="btn ghost small">Reset</button></div>
+  </div>
+
+  <div class="grid" id="questionsGrid"></div>
+
+  <div class="summary-panel">
+    <div>
+      <div>Total Score</div>
+      <div class="summary-item"><div class="num" id="totalScore">0 / 120</div></div>
+    </div>
+    <div>
+      <div>Percentage</div>
+      <div class="summary-item"><div class="num" id="percentageDisplay">0%</div></div>
+    </div>
+    <div>
+      <div>Rating</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="ratingStars" style="font-size:18px;"></div>
+        <div id="ratingValue">0.0 / 5</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;">
+    <div class="actions-card">
+      <strong>Actions</strong><br><br>
+      <button id="btnSaveLocal" class="btn" style="width:100%;">Save Entry</button>
+      <button id="btnLoadLocal" class="btn ghost" style="margin-top:10px;width:100%;">Load Entries</button>
+      <button id="btnClearLocal" class="btn ghost" style="margin-top:10px;width:100%;">Clear Entries</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <strong>Saved Entries</strong>
+    <table style="width:100%;margin-top:12px;border-collapse:collapse;">
+      <thead><tr><th>Date</th><th>Building</th><th>Floor</th><th>Counter</th><th>Score</th><th>%</th><th>Rating</th><th>Action</th></tr></thead>
+      <tbody id="entriesBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="renderArea"></div>
+
+<script>
+const QUESTIONS = [
+  { key: 'sales_report', text: 'Daily sales report submitted?' },
+
+  { key: 'weekly_checklist_report', text: 'Weekly checklist report submitted?' },
+
+  { key: 'feedback_report', text: 'Daily feedback report submitted?' },
+  { key: 'breakfast_on_time', text: 'Breakfast arranged on time (08:00)?' },
+  { key: 'lunch_on_time', text: 'Lunch arranged on time (12:30)?' },
+  { key: 'dinner_on_time', text: 'Dinner arranged on time (20:00)?' },
+  { key: 'temp_photo', text: 'Food temperature measured & photo posted?' },
+  { key: 'staff_behaviour', text: 'Staff behaviour is good?' },
+  { key: 'staff_hygiene', text: 'Staff hygiene is good?' },
+  { key: 'stall_clean', text: 'Stall is clean and hygienic?' },
+  { key: 'food_complaint', text: 'Food quality complaints received?' },
+  { key: 'cbre_complaint', text: 'CBRE complaint received?' },
+  { key: 'cognizant_complaint', text: 'Cognizant complaint received?' }
+];
+
+const STORAGE_KEY = 'konarak_audit_entries_final';
+
+function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function safeFilename(s){ return (s||'counter').replace(/[^\w\-_\.]/g,'_').slice(0,64); }
+function waitForImages(container){ const imgs=Array.from(container.querySelectorAll('img')); return Promise.all(imgs.map(i=>new Promise(r=>{ if(i.complete) r(); else i.onload=r; i.onerror=r }))); }
+function generateQRDataURL(text, size=420){ const qr=new QRious({ value: text, size: size, level: 'H' }); return qr.toDataURL(); }
+
+let questionsGrid,totalScoreEl,percentageDisplayEl,ratingStarsEl,ratingValueEl;
+let dateEl,buildingEl,floorEl,counterEl;
+let btnSaveLocal,btnLoadLocal,btnClearLocal,btnDownload,btnReset;
+let entriesBody,renderArea;
+
+function renderQuestionCards(){
+  questionsGrid.innerHTML='';
+  QUESTIONS.forEach(q=>{
+    const card=document.createElement('div');
+    card.className='qcard';
+    card.innerHTML=`
+      <div style="display:flex;align-items:center;gap:8px;">
+        <img src="https://img.icons8.com/fluency/48/000000/checklist.png" style="height:30px;width:30px;">
+        <div style="font-weight:600">${escapeHTML(q.text)}</div>
+      </div>
+      <div style="margin-top:8px">
+       <select class="form-control" data-key="${q.key}">
+  <option value="0">0</option>
+  <option value="1">1</option>
+  <option value="2">2</option>
+  <option value="3">3</option>
+  <option value="4">4</option>
+  <option value="5">5</option>
+  <option value="6">6</option>
+  <option value="7">7</option>
+  <option value="8">8</option>
+  <option value="9">9</option>
+  <option value="10">10</option>
+</select>
+
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#666">${q.negative ? 'Note: complaint (Yes) reduces score.' : ''}</div>
+    `;
+    questionsGrid.appendChild(card);
+  });
+  document.querySelectorAll('.form-control').forEach(el=>el.addEventListener('change', computeAndRenderScore));
+}
+
+function computeAndRenderScore(){
+  const values={};
+  QUESTIONS.forEach(q=>{
+    const sel=document.querySelector(`select[data-key="${q.key}"]`);
+    values[q.key]=sel?sel.value:'No';
+  });
+
+  let total=0;
+  QUESTIONS.forEach(q=>{
+ const score = Number(values[q.key] || 0);
+total += score;
+
+  });
+
+  const max = QUESTIONS.length * 10;
+  const percentage = (total / max) * 100;
+  const rating = (percentage / 100) * 5;
+
+  totalScoreEl.textContent = `${total} / ${max}`;
+  percentageDisplayEl.textContent = `${percentage.toFixed(1)}%`;
+  ratingValueEl.textContent = `${rating.toFixed(1)} / 5`;
+
+  ratingStarsEl.innerHTML='';
+  const full = Math.floor(rating);
+  const half = (rating - full) >= 0.5;
+  for(let i=0;i<5;i++){
+    const s=document.createElement('span');
+    s.style.fontSize='20px'; s.style.marginRight='4px';
+    if(i < full){ s.textContent='★'; s.style.color='gold'; }
+    else if(i === full && half){ s.textContent='★'; s.style.color='gold'; s.style.opacity='0.6'; }
+    else { s.textContent='☆'; s.style.color='#ddd'; }
+    ratingStarsEl.appendChild(s);
+  }
+
+  return { total, percentage, rating, values };
+}
+
+function buildQRText(meta, answers){
+  let out='AUDIT-DATA:\n';
+  out += `Stall: ${meta.counter}\n`;
+  out += `Building: ${meta.building}\n`;
+  out += `Floor: ${meta.floor}\n`;
+  out += `Score: ${meta.score}/120\n`;
+  out += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
+  QUESTIONS.forEach(q=>{
+  const score = Number(answers[q.key] || 0);
+out += `${q.key}: ${score}/10\n`;
+
+  });
+  out += `\nRated On: ${meta.dateFormatted}\nKonarak Food Services`;
+  return out;
+}
+
+function saveEntryLocal(){
+  const { total, percentage, rating, values } = computeAndRenderScore();
+  const entry = {
+    id: 'e_' + Date.now(),
+    building: buildingEl.value.trim(),
+    floor: floorEl.value.trim(),
+    counter: counterEl.value.trim(),
+    date: dateEl.value,
+    answers: values,
+    total, percentage, rating, timestamp: new Date().toISOString()
+  };
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  arr.push(entry);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
+  alert('Saved locally');
+}
+
+function loadEntriesToUI(){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  entriesBody.innerHTML='';
+  arr.slice().reverse().forEach(e=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.date}</td><td>${escapeHTML(e.building)}</td><td>${escapeHTML(e.floor)}</td><td>${escapeHTML(e.counter)}</td><td>${e.total}</td><td>${e.percentage.toFixed(1)}%</td><td>${e.rating.toFixed(1)} / 5</td><td><button class="btn small ghost" onclick="window.__konarak_load('${e.id}')">Load</button> <button class="btn small ghost" onclick="window.__konarak_delete('${e.id}')">Delete</button></td>`;
+    entriesBody.appendChild(tr);
+  });
+}
+
+window.__konarak_load = function(id){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  const e = arr.find(x=>x.id===id);
+  if(!e) return alert('Not found');
+  buildingEl.value=e.building; floorEl.value=e.floor; counterEl.value=e.counter; dateEl.value=e.date;
+  Object.keys(e.answers).forEach(k=>{ const sel=document.querySelector(`select[data-key="${k}"]`); if(sel) sel.value=e.answers[k]; });
+  computeAndRenderScore();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+window.__konarak_delete = function(id){
+  if(!confirm('Delete entry?')) return;
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  arr = arr.filter(x=>x.id!==id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
+};
+
+function clearLocalEntries(){
+  if(!confirm('Clear all saved entries?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  loadEntriesToUI();
+  alert('Cleared');
+}
+
+async function buildVariantBAndExport(){
+  const counterVal=(counterEl.value||'—').trim();
+  const buildingVal=(buildingEl.value||'—').trim();
+  const floorVal=(floorEl.value||'—').trim();
+  const rawDate = (dateEl.value && dateEl.value.trim()) ? dateEl.value.trim() : new Date().toISOString().slice(0,10);
+  const parts = rawDate.split('-'); // YYYY-MM-DD
+  const dateFormatted = parts.length===3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : rawDate;
+
+  const { total, percentage, rating, values } = computeAndRenderScore();
+  const meta = { counter: counterVal, building: buildingVal, floor: floorVal, date: rawDate, dateFormatted, score: total, percentage, rating: Number(rating.toFixed(1)) };
+
+  renderArea.innerHTML='';
+
+  const card=document.createElement('div');
+  card.style.width='1080px'; card.style.height='1920px'; card.style.padding='80px 60px'; card.style.boxSizing='border-box'; card.style.position='relative';
+  card.style.display='flex'; card.style.flexDirection='column'; card.style.alignItems='center'; card.style.textAlign='center';
+  card.style.background='linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)'; card.style.color='#fff'; card.style.fontFamily="'Segoe UI',sans-serif";
+
+  card.innerHTML = `
+    <div style="text-align:center;">
+      <img src="logo.png" style="height:120px" onerror="this.style.display='none'">
+      <div style="font-size:42px;font-weight:900;margin-top:20px">Konarak — Stall Audit</div>
+    </div>
+
+    <div style="margin-top:100px;">
+      <div style="font-size:84px;font-weight:900;">${escapeHTML(meta.counter)}</div>
+      <div style="margin-top:10px;font-size:40px;opacity:0.95;">${escapeHTML(meta.building)} — ${escapeHTML(meta.floor)}</div>
+      <div style="margin-top:10px;font-size:36px;opacity:0.9;">Rated On: ${escapeHTML(meta.dateFormatted)}</div>
+    </div>
+
+    <div style="margin-top:120px;">
+      <div id="vStars"></div>
+      <div style="margin-top:30px;font-size:70px;font-weight:900;">${meta.score} / 120</div>
+      <div style="margin-top:14px;font-size:40px;opacity:0.95;">${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
+    </div>
+
+    <div id="qrHolder" style="margin-top:120px;"></div>
+
+    <div style="position:absolute;left:0;right:0;bottom:80px;text-align:center;">
+      <img src="seel.png" style="height:240px" onerror="this.style.display='none'">
+    </div>
+  `;
+
+  renderArea.appendChild(card);
+
+  const starsDiv = card.querySelector('#vStars');
+  const full = Math.floor(meta.rating);
+  const half = (meta.rating - full) >= 0.5;
+  for(let i=0;i<5;i++){
+    const sp=document.createElement('span');
+    sp.style.fontSize='70px'; sp.style.margin='6px';
+    if(i<full){ sp.textContent='★'; sp.style.color='gold'; }
+    else if(i===full && half){ sp.textContent='★'; sp.style.color='gold'; sp.style.opacity='0.6'; }
+    else { sp.textContent='☆'; sp.style.color='rgba(255,255,255,0.32)'; }
+    starsDiv.appendChild(sp);
+  }
+
+  const qrText = buildQRText(meta, values);
+  const qrDataURL = generateQRDataURL(qrText, 420);
+  const qrImg = document.createElement('img');
+  qrImg.src = qrDataURL;
+  qrImg.style.width='420px'; qrImg.style.height='420px'; qrImg.style.marginTop='20px';
+  card.querySelector('#qrHolder').appendChild(qrImg);
+
+  await waitForImages(card);
+
+  try{
+    const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true });
+    canvas.toBlob(function(blob){
+      if(!blob){ alert('Export failed'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.dateFormatted}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ a.remove(); URL.revokeObjectURL(url); }, 900);
+    }, 'image/png', 1.0);
+  } catch(err){
+    console.error('Export error', err);
+    alert('Error generating image: ' + (err && err.message ? err.message : err));
+  } finally {
+    renderArea.innerHTML='';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  questionsGrid = document.getElementById('questionsGrid');
+  totalScoreEl = document.getElementById('totalScore');
+  percentageDisplayEl = document.getElementById('percentageDisplay');
+  ratingStarsEl = document.getElementById('ratingStars');
+  ratingValueEl = document.getElementById('ratingValue');
+
+  dateEl = document.getElementById('date');
+  buildingEl = document.getElementById('building');
+  floorEl = document.getElementById('floor');
+  counterEl = document.getElementById('counter');
+
+  btnSaveLocal = document.getElementById('btnSaveLocal');
+  btnLoadLocal = document.getElementById('btnLoadLocal');
+  btnClearLocal = document.getElementById('btnClearLocal');
+  btnDownload = document.getElementById('btnDownload');
+  btnReset = document.getElementById('btnReset');
+
+  entriesBody = document.getElementById('entriesBody');
+  renderArea = document.getElementById('renderArea');
+
+  renderQuestionCards();
+  document.querySelectorAll('.form-control').forEach(s=>s.value='10');
+
+  if(btnSaveLocal) btnSaveLocal.addEventListener('click', saveEntryLocal);
+  if(btnLoadLocal) btnLoadLocal.addEventListener('click', loadEntriesToUI);
+  if(btnClearLocal) btnClearLocal.addEventListener('click', clearLocalEntries);
+
+  if(btnReset) btnReset.addEventListener('click', () => {
+    buildingEl.value=''; floorEl.value=''; counterEl.value='';
+    dateEl.value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll('.form-control').forEach(s=>s.value='10');
+    computeAndRenderScore();
+  });
+
+  if(btnDownload) btnDownload.addEventListener('click', async (e) => {
+    e.preventDefault();
+    computeAndRenderScore();
+    await buildVariantBAndExport();
+  });
+
+  dateEl.value = new Date().toISOString().slice(0,10);
+  computeAndRenderScore();
+  loadEntriesToUI();
+});
+</script>
+
+</body>
+  </html>
