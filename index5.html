@@ -67,11 +67,13 @@ video{
 }
 textarea{
   width:100%;
-  min-height:70px;
+  min-height:60px;
   border-radius:12px;
   border:1px solid var(--border);
   padding:12px;
   font-size:14px;
+  resize:none;
+  overflow:hidden;
 }
 input[type=file]{
   width:100%;
@@ -116,6 +118,15 @@ button{
   color:var(--muted);
   padding:10px 0 20px;
 }
+pre{
+  white-space:pre-wrap;
+  word-break:break-word;
+  font-size:13px;
+  background:#fff;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+}
 </style>
 </head>
 
@@ -141,7 +152,7 @@ button{
 
   <div class="card">
     <h2>Paste QR Text</h2>
-    <textarea id="qrText" placeholder="Example: KONARAK|STALL|WAR144"></textarea>
+    <textarea id="qrText" placeholder="QR text will appear here" oninput="autoGrow(this)"></textarea>
     <button class="btn-decode" onclick="decodeText()">Decode Text</button>
   </div>
 
@@ -160,6 +171,12 @@ button{
 const video = document.getElementById("video");
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
+
+/* ---------- AUTO GROW TEXTAREA ---------- */
+function autoGrow(el){
+  el.style.height = "auto";
+  el.style.height = (el.scrollHeight + 4) + "px";
+}
 
 /* ---------- CAMERA SCAN ---------- */
 function startScan(){
@@ -180,8 +197,7 @@ function scanFrame(){
     const img = ctx.getImageData(0,0,canvas.width,canvas.height);
     const qr = jsQR(img.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
     if(qr){
-      document.getElementById("qrText").value = qr.data;
-      decodeText();
+      qrFound(qr.data);
       stopCamera();
       return;
     }
@@ -208,7 +224,7 @@ function preprocessImage(ctx,w,h){
   ctx.putImageData(img,0,0);
 }
 
-/* ---------- IMAGE UPLOAD SCAN ---------- */
+/* ---------- IMAGE UPLOAD ---------- */
 function scanImage(input){
   const file = input.files[0];
   if(!file) return;
@@ -224,8 +240,7 @@ function scanImage(input){
       const data = ctx.getImageData(0,0,canvas.width,canvas.height);
       const qr = jsQR(data.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
       if(qr){
-        document.getElementById("qrText").value = qr.data;
-        decodeText();
+        qrFound(qr.data);
         return;
       }
     }
@@ -235,9 +250,18 @@ function scanImage(input){
   img.src = URL.createObjectURL(file);
 }
 
+/* ---------- COMMON QR HANDLER ---------- */
+function qrFound(text){
+  const ta = document.getElementById("qrText");
+  ta.value = text;
+  autoGrow(ta);
+  decodeText();
+}
+
 /* ---------- DECODE ---------- */
 function decodeText(){
-  const text = document.getElementById("qrText").value.trim();
+  const textarea = document.getElementById("qrText");
+  const text = textarea.value.trim();
   const result = document.getElementById("result");
 
   if(!text){
@@ -245,44 +269,50 @@ function decodeText(){
     return;
   }
 
+  autoGrow(textarea);
+
+  // Try structured format
   const parts = text.split("|");
-  if(parts.length < 3){
-    result.innerHTML = `<div class="error">Invalid QR format</div>`;
-    return;
-  }
 
-  const org = parts[0], type = parts[1], code = parts[2];
+  if(parts.length >= 3){
+    const org = parts[0];
+    const type = parts[1];
+    const code = parts[2];
 
-  /* SAMPLE DATA (replace with DB / Sheet later) */
-  const db = {
-    "WAR144":{
-      name:"Konarak – Kitchen",
-      rating:"5.0 / 5",
-      score:"120 / 120",
-      percent:"100%",
-      date:"12/12/2025",
-      status:"APPROVED"
+    const db = {
+      "WAR144":{
+        location:"Konarak – Kitchen",
+        score:"120 / 120",
+        rating:"5.0 / 5",
+        percent:"100%",
+        date:"12/12/2025",
+        status:"APPROVED"
+      }
+    };
+
+    if(db[code]){
+      const d = db[code];
+      result.innerHTML = `
+        <div class="success">Verified Audit</div>
+        <div class="row"><span class="label">Organization</span><span class="value">${org}</span></div>
+        <div class="row"><span class="label">Type</span><span class="value">${type}</span></div>
+        <div class="row"><span class="label">Code</span><span class="value">${code}</span></div>
+        <div class="row"><span class="label">Location</span><span class="value">${d.location}</span></div>
+        <div class="row"><span class="label">Score</span><span class="value">${d.score}</span></div>
+        <div class="row"><span class="label">Rating</span><span class="value">${d.rating}</span></div>
+        <div class="row"><span class="label">Percentage</span><span class="value">${d.percent}</span></div>
+        <div class="row"><span class="label">Rated On</span><span class="value">${d.date}</span></div>
+        <div class="row"><span class="label">Status</span><span class="value">${d.status}</span></div>
+      `;
+      return;
     }
-  };
-
-  if(!db[code]){
-    result.innerHTML = `<div class="error">No record found for ${code}</div>`;
-    return;
   }
 
-  const d = db[code];
-
+  // Raw / high-density QR
   result.innerHTML = `
-    <div class="success">Verified Audit</div>
-    <div class="row"><span class="label">Organization</span><span class="value">${org}</span></div>
-    <div class="row"><span class="label">Type</span><span class="value">${type}</span></div>
-    <div class="row"><span class="label">Code</span><span class="value">${code}</span></div>
-    <div class="row"><span class="label">Location</span><span class="value">${d.name}</span></div>
-    <div class="row"><span class="label">Score</span><span class="value">${d.score}</span></div>
-    <div class="row"><span class="label">Rating</span><span class="value">${d.rating}</span></div>
-    <div class="row"><span class="label">Percentage</span><span class="value">${d.percent}</span></div>
-    <div class="row"><span class="label">Rated On</span><span class="value">${d.date}</span></div>
-    <div class="row"><span class="label">Status</span><span class="value">${d.status}</span></div>
+    <div class="success">QR Decoded Successfully</div>
+    <div class="label" style="margin-bottom:6px">Full QR Payload</div>
+    <pre>${text}</pre>
   `;
 }
 </script>
