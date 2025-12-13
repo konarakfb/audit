@@ -5,7 +5,7 @@
 <title>Konarak | QR Text Decoder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- QR Decoder -->
+<!-- jsQR -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
 <style>
@@ -128,27 +128,23 @@ button{
 
 <div class="container">
 
-  <!-- CAMERA SCAN -->
   <div class="card">
-    <h2>Scan QR Using Camera</h2>
+    <h2>Scan QR (Camera)</h2>
     <video id="video" autoplay muted playsinline></video>
     <button class="btn-scan" onclick="startScan()">Start Camera Scan</button>
   </div>
 
-  <!-- UPLOAD IMAGE -->
   <div class="card">
     <h2>Upload QR Image</h2>
     <input type="file" accept="image/*" onchange="scanImage(this)">
   </div>
 
-  <!-- MANUAL TEXT -->
   <div class="card">
     <h2>Paste QR Text</h2>
     <textarea id="qrText" placeholder="Example: KONARAK|STALL|WAR144"></textarea>
     <button class="btn-decode" onclick="decodeText()">Decode Text</button>
   </div>
 
-  <!-- RESULT -->
   <div class="card">
     <h2>Decoded Information</h2>
     <div id="result" class="result">Waiting for QR input.</div>
@@ -161,28 +157,30 @@ button{
 </div>
 
 <script>
-const video=document.getElementById("video");
-const canvas=document.createElement("canvas");
-const ctx=canvas.getContext("2d");
+const video = document.getElementById("video");
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
 
+/* ---------- CAMERA SCAN ---------- */
 function startScan(){
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}})
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
   .then(stream=>{
-    video.srcObject=stream;
+    video.srcObject = stream;
     requestAnimationFrame(scanFrame);
   })
   .catch(()=>alert("Camera permission required"));
 }
 
 function scanFrame(){
-  if(video.readyState===video.HAVE_ENOUGH_DATA){
-    canvas.width=video.videoWidth;
-    canvas.height=video.videoHeight;
+  if(video.readyState === video.HAVE_ENOUGH_DATA){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     ctx.drawImage(video,0,0);
-    const img=ctx.getImageData(0,0,canvas.width,canvas.height);
-    const qr=jsQR(img.data,canvas.width,canvas.height);
+    preprocessImage(ctx,canvas.width,canvas.height);
+    const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const qr = jsQR(img.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
     if(qr){
-      document.getElementById("qrText").value=qr.data;
+      document.getElementById("qrText").value = qr.data;
       decodeText();
       stopCamera();
       return;
@@ -198,69 +196,93 @@ function stopCamera(){
   }
 }
 
-function scanImage(input){
-  const file=input.files[0];
-  if(!file)return;
-  const img=new Image();
-  img.onload=function(){
-    canvas.width=img.width;
-    canvas.height=img.height;
-    ctx.drawImage(img,0,0);
-    const data=ctx.getImageData(0,0,canvas.width,canvas.height);
-    const qr=jsQR(data.data,canvas.width,canvas.height);
-    if(qr){
-      document.getElementById("qrText").value=qr.data;
-      decodeText();
-    }else{
-      document.getElementById("result").innerHTML=
-        `<div class="error">No QR code detected in image</div>`;
-    }
-  };
-  img.src=URL.createObjectURL(file);
+/* ---------- IMAGE PREPROCESS ---------- */
+function preprocessImage(ctx,w,h){
+  const img = ctx.getImageData(0,0,w,h);
+  const d = img.data;
+  for(let i=0;i<d.length;i+=4){
+    const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+    const bw = gray > 128 ? 255 : 0;
+    d[i]=d[i+1]=d[i+2]=bw;
+  }
+  ctx.putImageData(img,0,0);
 }
 
-function decodeText(){
-  const text=document.getElementById("qrText").value.trim();
-  const result=document.getElementById("result");
-  if(!text){
-    result.innerHTML=`<div class="error">No QR text found</div>`;
-    return;
-  }
-  const parts=text.split("|");
-  if(parts.length<3){
-    result.innerHTML=`<div class="error">Invalid QR format</div>`;
-    return;
-  }
-  const org=parts[0],type=parts[1],code=parts[2];
+/* ---------- IMAGE UPLOAD SCAN ---------- */
+function scanImage(input){
+  const file = input.files[0];
+  if(!file) return;
 
-  const db={
+  const img = new Image();
+  img.onload = function(){
+    const scales = [1,0.75,0.5,0.35];
+    for(const s of scales){
+      canvas.width = img.width * s;
+      canvas.height = img.height * s;
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      preprocessImage(ctx,canvas.width,canvas.height);
+      const data = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const qr = jsQR(data.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
+      if(qr){
+        document.getElementById("qrText").value = qr.data;
+        decodeText();
+        return;
+      }
+    }
+    document.getElementById("result").innerHTML =
+      `<div class="error">QR detected but unreadable. Please upload a clearer image.</div>`;
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+/* ---------- DECODE ---------- */
+function decodeText(){
+  const text = document.getElementById("qrText").value.trim();
+  const result = document.getElementById("result");
+
+  if(!text){
+    result.innerHTML = `<div class="error">No QR text found</div>`;
+    return;
+  }
+
+  const parts = text.split("|");
+  if(parts.length < 3){
+    result.innerHTML = `<div class="error">Invalid QR format</div>`;
+    return;
+  }
+
+  const org = parts[0], type = parts[1], code = parts[2];
+
+  /* SAMPLE DATA (replace with DB / Sheet later) */
+  const db = {
     "WAR144":{
-      name:"Konarak – WAR144",
-      rating:"4.5 / 5",
-      hygiene:"9 / 10",
-      audit:"12-Dec-2025",
-      status:"APPROVED",
-      remarks:"Gloves mandatory"
+      name:"Konarak – Kitchen",
+      rating:"5.0 / 5",
+      score:"120 / 120",
+      percent:"100%",
+      date:"12/12/2025",
+      status:"APPROVED"
     }
   };
 
   if(!db[code]){
-    result.innerHTML=`<div class="error">No record found for ${code}</div>`;
+    result.innerHTML = `<div class="error">No record found for ${code}</div>`;
     return;
   }
 
-  const d=db[code];
-  result.innerHTML=`
-    <div class="success">Verified Record</div>
+  const d = db[code];
+
+  result.innerHTML = `
+    <div class="success">Verified Audit</div>
     <div class="row"><span class="label">Organization</span><span class="value">${org}</span></div>
     <div class="row"><span class="label">Type</span><span class="value">${type}</span></div>
     <div class="row"><span class="label">Code</span><span class="value">${code}</span></div>
-    <div class="row"><span class="label">Name</span><span class="value">${d.name}</span></div>
+    <div class="row"><span class="label">Location</span><span class="value">${d.name}</span></div>
+    <div class="row"><span class="label">Score</span><span class="value">${d.score}</span></div>
     <div class="row"><span class="label">Rating</span><span class="value">${d.rating}</span></div>
-    <div class="row"><span class="label">Hygiene</span><span class="value">${d.hygiene}</span></div>
-    <div class="row"><span class="label">Last Audit</span><span class="value">${d.audit}</span></div>
+    <div class="row"><span class="label">Percentage</span><span class="value">${d.percent}</span></div>
+    <div class="row"><span class="label">Rated On</span><span class="value">${d.date}</span></div>
     <div class="row"><span class="label">Status</span><span class="value">${d.status}</span></div>
-    <div class="row"><span class="label">Remarks</span><span class="value">${d.remarks}</span></div>
   `;
 }
 </script>
