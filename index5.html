@@ -196,7 +196,7 @@ function buildQRText(meta, answers){
   out += `Stall: ${meta.counter}\n`;
   out += `Building: ${meta.building}\n`;
   out += `Floor: ${meta.floor}\n`;
-  out += `Score: ${meta.score}/120\n`;
+  out += `Score: ${meta.score}/${QUESTIONS.length * 10}\n`;
   out += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
   QUESTIONS.forEach(q=>{
   const score = Number(answers[q.key] || 0);
