@@ -1,131 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Konarak | QR Text Decoder</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Konarak — Stall Audit (Final)</title>
 
-<!-- jsQR -->
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- CDN libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
 
 <style>
-:root{
-  --bg:#f2f4f8;
-  --card:#ffffff;
-  --brand:#0b1220;
-  --accent:#f59e0b;
-  --text:#0f172a;
-  --muted:#6b7280;
-  --border:#e5e7eb;
-  --success:#16a34a;
-  --error:#dc2626;
-}
+:root{ --bg1:linear-gradient(135deg,#eef2f3,#d9e4f5); --card:#ffffff; --shadow:0 10px 30px rgba(2,6,23,0.12);}
 *{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
+body{margin:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg1);color:#0b1220}
+
+/* Header */
+.header{height:64px;background:#0b1220;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:40}
+.header .brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:18px}
+.header .brand img{height:36px;width:36px;background:#fff;border-radius:6px;padding:3px}
+
+/* Main container */
+.container{max-width:1200px;margin:22px auto;padding:0 18px}
+.location-card{background:white;padding:12px;border-radius:10px;display:flex;gap:10px;align-items:center;box-shadow:var(--shadow)}
+.location-card input{padding:8px 10px;border-radius:8px;border:1px solid #e6eefc}
+
+/* Buttons */
+.btn{background:#1665ff;color:#fff;border:none;padding:9px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn.ghost{background:transparent;color:#0b1220;border:1px solid #e6eefc}
+
+/* Questions */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:16px}
+.qcard{background:white;padding:14px;border-radius:12px;box-shadow:0 10px 20px rgba(0,0,0,0.06)}
+select.form-control{width:100%;padding:10px;border-radius:8px;border:1px solid #eef3fb;background:#fff;font-size:14px}
+
+/* Summary Panel */
+summary-panel{display:flex}
+.summary-panel{display:flex;gap:12px;background:white;padding:12px;border-radius:10px;margin-top:16px;box-shadow:var(--shadow);flex-wrap:wrap}
+.summary-item .num{font-size:16px;font-weight:700}
+
+/* Actions */
+.actions-card{width:300px;background:white;padding:14px;border-radius:10px;box-shadow:var(--shadow);margin-top:16px}
+
+/* Saved Entries */
+.table-card{margin-top:16px;background:white;padding:14px;border-radius:10px;box-shadow:var(--shadow)}
+.table-responsive{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-responsive table{min-width:700px;border-collapse:collapse}
+
+/* HD Render Area */
+#renderArea{position:fixed;top:0;left:0;width:2160px;height:3840px;opacity:0;pointer-events:none;z-index:-1}
+.card-inner{width:2160px;height:3840px;box-sizing:border-box;position:relative}
+
+.seal-lower-zone{
+  position:absolute;left:0;right:0;bottom:0;height:32%;
+  display:flex;align-items:center;justify-content:center;text-align:center;
 }
-.header{
-  background:var(--brand);
-  color:#fff;
-  padding:16px;
-  text-align:center;
-}
-.header h1{
-  margin:0;
-  font-size:18px;
-  font-weight:800;
-  letter-spacing:.6px;
-}
-.header span{
-  font-size:12px;
-  color:#facc15;
-}
-.container{
-  max-width:520px;
-  margin:auto;
-  padding:14px;
-}
-.card{
-  background:var(--card);
-  border-radius:16px;
-  padding:16px;
-  box-shadow:0 8px 24px rgba(2,6,23,.08);
-  margin-bottom:14px;
-}
-.card h2{
-  font-size:15px;
-  margin:0 0 10px;
-  font-weight:700;
-}
-video{
-  width:100%;
-  border-radius:14px;
-  border:1px solid var(--border);
-}
-textarea{
-  width:100%;
-  min-height:60px;
-  border-radius:12px;
-  border:1px solid var(--border);
-  padding:12px;
-  font-size:14px;
-  resize:none;
-  overflow:hidden;
-}
-input[type=file]{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:1px dashed var(--border);
-  background:#fafafa;
-}
-button{
-  width:100%;
-  border:none;
-  border-radius:14px;
-  padding:14px;
-  font-size:15px;
-  font-weight:800;
-  cursor:pointer;
-  margin-top:10px;
-}
-.btn-scan{background:var(--accent);color:#111827}
-.btn-decode{background:var(--brand);color:#fff}
-.result{
-  border-radius:14px;
-  padding:14px;
-  background:#f9fafb;
-  border:1px dashed var(--border);
-}
-.row{
-  display:flex;
-  justify-content:space-between;
-  padding:6px 0;
-  border-bottom:1px solid #eef2f7;
-  font-size:14px;
-}
-.row:last-child{border-bottom:none}
-.label{color:var(--muted)}
-.value{font-weight:700;text-align:right}
-.success{color:var(--success);font-weight:800;margin-bottom:8px}
-.error{color:var(--error);font-weight:700}
-.footer{
-  text-align:center;
-  font-size:12px;
-  color:var(--muted);
-  padding:10px 0 20px;
-}
-pre{
-  white-space:pre-wrap;
-  word-break:break-word;
-  font-size:13px;
-  background:#fff;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid var(--border);
+
+@media(max-width:640px){
+  .location-card{flex-direction:column;align-items:stretch}
+  .actions-card{width:100%}
+  .summary-panel{flex-direction:column}
 }
 </style>
 </head>
@@ -133,188 +67,403 @@ pre{
 <body>
 
 <div class="header">
-  <h1>KONARAK</h1>
-  <span>QR Text Decoder Platform</span>
+  <div class="brand">
+    <img src="logo.png" onerror="this.style.display='none'">
+    Konarak — Stall Audit
+  </div>
+  <button id="btnDownload" class="btn small">Generate Rating Card (HD)</button>
 </div>
 
 <div class="container">
 
-  <div class="card">
-    <h2>Scan QR (Camera)</h2>
-    <video id="video" autoplay muted playsinline></video>
-    <button class="btn-scan" onclick="startScan()">Start Camera Scan</button>
+  <!-- LOCATION INPUTS -->
+  <div class="location-card">
+    <div><label>Building</label><br><input id="building" placeholder="Building"></div>
+    <div><label>Floor</label><br><input id="floor" placeholder="Floor (e.g. 1st floor)"></div>
+    <div style="flex:1"><label>Counter / Stall</label><br><input id="counter" placeholder="Counter"></div>
+    <div><label>Date</label><br><input type="date" id="date"></div>
+    <div><button id="btnReset" class="btn ghost small">Reset</button></div>
   </div>
 
-  <div class="card">
-    <h2>Upload QR Image</h2>
-    <input type="file" accept="image/*" onchange="scanImage(this)">
+  <!-- QUESTIONS -->
+  <div class="grid" id="questionsGrid"></div>
+
+  <!-- SUMMARY -->
+  <div class="summary-panel">
+    <div>
+      <div>Total Score</div>
+      <div class="summary-item"><div class="num" id="totalScore">0 / 130</div></div>
+    </div>
+    <div>
+      <div>Percentage</div>
+      <div class="summary-item"><div class="num" id="percentageDisplay">0%</div></div>
+    </div>
+    <div>
+      <div>Rating</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="ratingStars" style="font-size:16px"></div>
+        <div id="ratingValue">0.0 / 5</div>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Paste QR Text</h2>
-    <textarea id="qrText" placeholder="QR text will appear here" oninput="autoGrow(this)"></textarea>
-    <button class="btn-decode" onclick="decodeText()">Decode Text</button>
+  <!-- ACTIONS -->
+  <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
+    <div class="actions-card">
+      <strong>Actions</strong><br><br>
+      <button id="btnSaveLocal" class="btn" style="width:100%;">Save Entry</button>
+      <button id="btnLoadLocal" class="btn ghost" style="margin-top:8px;width:100%;">Load Entries</button>
+      <button id="btnClearLocal" class="btn ghost" style="margin-top:8px;width:100%;">Clear Entries</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Decoded Information</h2>
-    <div id="result" class="result">Waiting for QR input.</div>
+  <!-- SAVED ENTRIES -->
+  <div class="table-card">
+    <strong>Saved Entries</strong>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Building</th><th>Floor</th><th>Counter</th><th>Score</th><th>%</th><th>Rating</th><th>Action</th></tr>
+        </thead>
+        <tbody id="entriesBody"></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
 
-<div class="footer">
-  Konarak Food & Beverages • Official Verification
-</div>
+<div id="renderArea"></div>
 
 <script>
-const video = document.getElementById("video");
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
+/* =====================================
+   QUESTIONS — All 0 to 10 scoring
+===================================== */
+const QUESTIONS = [
+  { key:'sales_report', text:'Daily sales report submitted?' },
+  { key:'weekly_checklist', text:'Weekly checklist report submitted?' },
+  { key:'feedback_report', text:'Daily feedback report submitted?' },
+  { key:'breakfast_on_time', text:'Breakfast arranged on time (08:00)?' },
+  { key:'lunch_on_time', text:'Lunch arranged on time (12:30)?' },
+  { key:'dinner_on_time', text:'Dinner arranged on time (20:00)?' },
+  { key:'temp_photo', text:'Food temperature measured & photo posted?' },
+  { key:'staff_behaviour', text:'Staff behaviour is good?' },
+  { key:'staff_hygiene', text:'Staff hygiene is good?' },
+  { key:'stall_clean', text:'Stall is clean and hygienic?' },
+  { key:'food_complaint', text:'Food quality complaints received?' },
+  { key:'cbre_complaint', text:'CBRE complaint received?' },
+  { key:'cognizant_complaint', text:'Cognizant complaint received?' }
+];
 
-/* ---------- AUTO GROW TEXTAREA ---------- */
-function autoGrow(el){
-  el.style.height = "auto";
-  el.style.height = (el.scrollHeight + 4) + "px";
+const MAX_SCORE = QUESTIONS.length * 10; // 130
+const STORAGE_KEY = "konarak_audit_entries_final";
+
+/* =====================================
+   UTILITY FUNCTIONS
+===================================== */
+function escapeHTML(s){ return (s||'').toString().replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function safeFilename(s){ return (s||"counter").replace(/[^\w\-_\.]/g,"_"); }
+function formatDateDDMMYYYY(iso){ if(!iso) return ''; const p = iso.split("-"); return `${p[2]}/${p[1]}/${p[0]}`; }
+function waitForImages(el){ return Promise.all([...el.querySelectorAll("img")].map(img=>new Promise(res=>{ if(img.complete) res(); else img.onload=img.onerror=res; }))); }
+
+/* =====================================
+   RENDER QUESTION CARDS (0–10)
+===================================== */
+function renderQuestionCards(){
+  const qgrid = document.getElementById("questionsGrid");
+  qgrid.innerHTML = "";
+
+  QUESTIONS.forEach(q=>{
+    const wrap = document.createElement("div");
+    wrap.className = "qcard";
+
+    let opts = "";
+    for(let i=0;i<=10;i++) opts += `<option value="${i}">${i}</option>`;
+
+    wrap.innerHTML = `
+      <div style="font-weight:600">${escapeHTML(q.text)}</div>
+      <div style="margin-top:8px">
+        <select class="form-control" data-key="${q.key}">${opts}</select>
+      </div>
+    `;
+
+    qgrid.appendChild(wrap);
+  });
+
+  document.querySelectorAll(".form-control").forEach(s => s.addEventListener("change", computeAndRenderScore));
 }
 
-/* ---------- CAMERA SCAN ---------- */
-function startScan(){
-  navigator.mediaDevices.getUserMedia({ video:{ facingMode:"environment" } })
-  .then(stream=>{
-    video.srcObject = stream;
-    requestAnimationFrame(scanFrame);
-  })
-  .catch(()=>alert("Camera permission required"));
-}
+/* =====================================
+   SCORING (Simple sum of 0–10 values)
+===================================== */
+function computeAndRenderScore(){
+  const vals = {};
+  QUESTIONS.forEach(q=>{
+    let v = document.querySelector(`select[data-key="${q.key}"]`);
+    vals[q.key] = Number(v?.value||0);
+  });
 
-function scanFrame(){
-  if(video.readyState === video.HAVE_ENOUGH_DATA){
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video,0,0);
-    preprocessImage(ctx,canvas.width,canvas.height);
-    const img = ctx.getImageData(0,0,canvas.width,canvas.height);
-    const qr = jsQR(img.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
-    if(qr){
-      qrFound(qr.data);
-      stopCamera();
-      return;
-    }
+  const total = Object.values(vals).reduce((a,b)=>a+b,0);
+  const percentage = (total / MAX_SCORE) * 100;
+  const rating = (percentage/100) * 5;
+
+  document.getElementById("totalScore").textContent = `${total} / ${MAX_SCORE}`;
+  document.getElementById("percentageDisplay").textContent = `${percentage.toFixed(1)}%`;
+  document.getElementById("ratingValue").textContent = `${rating.toFixed(1)} / 5`;
+
+  const starWrap = document.getElementById("ratingStars");
+  starWrap.innerHTML = "";
+  const full = Math.floor(rating), half = (rating - full)>=0.5;
+  for(let i=0;i<5;i++){
+    const s=document.createElement("span");
+    s.style.fontSize="18px"; s.style.marginRight="4px";
+    if(i<full){ s.textContent="★"; s.style.color="gold"; }
+    else if(i===full && half){ s.textContent="★"; s.style.color="gold"; s.style.opacity=0.6; }
+    else { s.textContent="☆"; s.style.color="#ccc"; }
+    starWrap.appendChild(s);
   }
-  requestAnimationFrame(scanFrame);
+
+  return { total, percentage, rating, values: vals };
 }
 
-function stopCamera(){
-  if(video.srcObject){
-    video.srcObject.getTracks().forEach(t=>t.stop());
-    video.srcObject=null;
-  }
+/* =====================================
+   QR TEXT BUILDER (0–10 values)
+===================================== */
+function buildQRText(meta, values){
+  let txt = "";
+  txt += `Stall: ${meta.counter}\n`;
+  txt += `Building: ${meta.building}\n`;
+  txt += `Floor: ${meta.floor}\n`;
+  txt += `Score: ${meta.score}/${MAX_SCORE}\n`;
+  txt += `Rating: ${meta.rating.toFixed(1)} / 5\n\n`;
+
+  QUESTIONS.forEach(q=>{
+    const v = Number(values[q.key]) || 0;
+    txt += `${q.key}: ${v}/10\n`;
+  });
+
+  txt += `\nRated On: ${meta.dateFmt}\n`;
+  txt += `Konarak Food Services`;
+
+  return txt;
 }
 
-/* ---------- IMAGE PREPROCESS ---------- */
-function preprocessImage(ctx,w,h){
-  const img = ctx.getImageData(0,0,w,h);
-  const d = img.data;
-  for(let i=0;i<d.length;i+=4){
-    const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
-    const bw = gray > 128 ? 255 : 0;
-    d[i]=d[i+1]=d[i+2]=bw;
-  }
-  ctx.putImageData(img,0,0);
-}
-
-/* ---------- IMAGE UPLOAD ---------- */
-function scanImage(input){
-  const file = input.files[0];
-  if(!file) return;
-
-  const img = new Image();
-  img.onload = function(){
-    const scales = [1,0.75,0.5,0.35];
-    for(const s of scales){
-      canvas.width = img.width * s;
-      canvas.height = img.height * s;
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-      preprocessImage(ctx,canvas.width,canvas.height);
-      const data = ctx.getImageData(0,0,canvas.width,canvas.height);
-      const qr = jsQR(data.data,canvas.width,canvas.height,{inversionAttempts:"attemptBoth"});
-      if(qr){
-        qrFound(qr.data);
-        return;
-      }
-    }
-    document.getElementById("result").innerHTML =
-      `<div class="error">QR detected but unreadable. Please upload a clearer image.</div>`;
+/* =====================================
+   LOCAL STORAGE SAVE/LOAD
+===================================== */
+function saveEntryLocal(){
+  const { total, percentage, rating, values } = computeAndRenderScore();
+  const e = {
+    id:"e_"+Date.now(),
+    building:building.value.trim(),
+    floor:floor.value.trim(),
+    counter:counter.value.trim(),
+    date:date.value,
+    total, percentage, rating, values
   };
-  img.src = URL.createObjectURL(file);
+
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+  arr.push(e);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
 }
 
-/* ---------- COMMON QR HANDLER ---------- */
-function qrFound(text){
-  const ta = document.getElementById("qrText");
-  ta.value = text;
-  autoGrow(ta);
-  decodeText();
+function loadEntriesToUI(){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+  const body = document.getElementById("entriesBody");
+  body.innerHTML = "";
+
+  arr.slice().reverse().forEach(e=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${e.date}</td>
+      <td>${escapeHTML(e.building)}</td>
+      <td>${escapeHTML(e.floor)}</td>
+      <td>${escapeHTML(e.counter)}</td>
+      <td>${e.total}</td>
+      <td>${e.percentage.toFixed(1)}%</td>
+      <td>${e.rating.toFixed(1)} / 5</td>
+      <td>
+        <button class="btn small ghost" onclick="__load('${e.id}')">Load</button>
+        <button class="btn small ghost" onclick="__delete('${e.id}')">Delete</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
 }
 
-/* ---------- DECODE ---------- */
-function decodeText(){
-  const textarea = document.getElementById("qrText");
-  const text = textarea.value.trim();
-  const result = document.getElementById("result");
+window.__load = function(id){
+  const arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+  const e = arr.find(x=>x.id===id);
+  if(!e) return alert("Not found");
 
-  if(!text){
-    result.innerHTML = `<div class="error">No QR text found</div>`;
-    return;
+  building.value = e.building;
+  floor.value = e.floor;
+  counter.value = e.counter;
+  date.value = e.date;
+
+  Object.keys(e.values).forEach(k=>{
+    let s = document.querySelector(`select[data-key="${k}"]`);
+    if(s) s.value = e.values[k];
+  });
+
+  computeAndRenderScore();
+  scrollTo(0,0);
+};
+
+window.__delete = function(id){
+  let arr = JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+  arr = arr.filter(x=>x.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  loadEntriesToUI();
+};
+
+function clearLocalEntries(){
+  if(confirm("Clear all entries?")){
+    localStorage.removeItem(STORAGE_KEY);
+    loadEntriesToUI();
   }
+}
 
-  autoGrow(textarea);
+/* =====================================
+   HD CARD EXPORT (NO LOGIC CHANGES)
+===================================== */
+async function generateHDCard(){
+  const { total, percentage, rating, values } = computeAndRenderScore();
 
-  // Try structured format
-  const parts = text.split("|");
+  const meta = {
+    counter: counter.value.trim() || "—",
+    building: building.value.trim() || "—",
+    floor: floor.value.trim() || "—",
+    dateFmt: formatDateDDMMYYYY(date.value || new Date().toISOString().slice(0,10)),
+    score: total,
+    percentage,
+    rating: Number(rating.toFixed(1))
+  };
 
-  if(parts.length >= 3){
-    const org = parts[0];
-    const type = parts[1];
-    const code = parts[2];
+  const renderArea = document.getElementById("renderArea");
+  renderArea.innerHTML = "";
 
-    const db = {
-      "WAR144":{
-        location:"Konarak – Kitchen",
-        score:"120 / 120",
-        rating:"5.0 / 5",
-        percent:"100%",
-        date:"12/12/2025",
-        status:"APPROVED"
-      }
-    };
+  const card = document.createElement("div");
+  card.className = "card-inner";
+  card.style.background = "linear-gradient(180deg,#0a0f24,#1e3a8a,#4f46e5)";
+  card.style.color = "#fff";
+  card.style.padding = "120px 100px";
+  card.style.textAlign = "center";
+  card.style.position = "relative";
+  card.style.fontFamily = "'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
-    if(db[code]){
-      const d = db[code];
-      result.innerHTML = `
-        <div class="success">Verified Audit</div>
-        <div class="row"><span class="label">Organization</span><span class="value">${org}</span></div>
-        <div class="row"><span class="label">Type</span><span class="value">${type}</span></div>
-        <div class="row"><span class="label">Code</span><span class="value">${code}</span></div>
-        <div class="row"><span class="label">Location</span><span class="value">${d.location}</span></div>
-        <div class="row"><span class="label">Score</span><span class="value">${d.score}</span></div>
-        <div class="row"><span class="label">Rating</span><span class="value">${d.rating}</span></div>
-        <div class="row"><span class="label">Percentage</span><span class="value">${d.percent}</span></div>
-        <div class="row"><span class="label">Rated On</span><span class="value">${d.date}</span></div>
-        <div class="row"><span class="label">Status</span><span class="value">${d.status}</span></div>
-      `;
-      return;
-    }
-  }
+  card.innerHTML = `
+    <div>
+      <img src="logo.png" style="height:220px" onerror="this.style.display='none'">
+      <div style="font-size:84px;font-weight:900;margin-top:28px">Konarak — Stall Audit</div>
+    </div>
 
-  // Raw / high-density QR
-  result.innerHTML = `
-    <div class="success">QR Decoded Successfully</div>
-    <div class="label" style="margin-bottom:6px">Full QR Payload</div>
-    <pre>${text}</pre>
+    <div style="margin-top:120px;">
+      <div style="font-size:168px;font-weight:900;">${escapeHTML(meta.counter)}</div>
+      <div style="margin-top:18px;font-size:64px;opacity:0.95;">${escapeHTML(meta.building)} — ${escapeHTML(meta.floor)}</div>
+      <div style="margin-top:12px;font-size:48px;opacity:0.9;">Rated On: ${meta.dateFmt}</div>
+    </div>
+
+    <div style="margin-top:60px;">
+      <div id="starsHD"></div>
+      <div style="margin-top:26px;font-size:140px;font-weight:900;">${meta.score} / ${MAX_SCORE}</div>
+      <div style="margin-top:16px;font-size:56px;opacity:0.95;">${meta.percentage.toFixed(1)}% — ${meta.rating.toFixed(1)} / 5</div>
+    </div>
+
+    <div id="qrHolder" style="position:absolute;left:0;right:0;top:62%;transform:translateY(-50%);"></div>
+
+    <div class="seal-lower-zone">
+      <img src="seel.png" style="height:480px" onerror="this.style.display='none'">
+    </div>
   `;
+
+  renderArea.appendChild(card);
+
+  // HD stars
+  const sh = card.querySelector("#starsHD");
+  const full = Math.floor(meta.rating);
+  const half = (meta.rating - full) >= 0.5;
+  for(let i=0;i<5;i++){
+    const s = document.createElement("span");
+    s.style.fontSize = "140px";
+    s.style.margin = "10px";
+    if(i < full){ s.textContent="★"; s.style.color="gold"; }
+    else if(i === full && half){ s.textContent="★"; s.style.color="gold"; s.style.opacity=0.6; }
+    else { s.textContent="☆"; s.style.color="rgba(255,255,255,0.32)"; }
+    sh.appendChild(s);
+  }
+
+  /* QR */
+
+const img = document.createElement("img");
+img.src = qr.toDataURL();
+img.style.width = "840px";
+img.style.height = "840px";
+img.style.display = "block";
+
+/* QR appearance */
+img.style.background = "transparent";      // 🔑 do NOT fill background
+img.style.padding = "12px";                // quiet zone
+img.style.outline = "8px solid #ffffff";   // 🔑 visible white border
+img.style.outlineOffset = "0px";
+img.style.borderRadius = "6px";
+img.style.boxSizing = "border-box";
+
+/* Centering (same as before) */
+const holder = card.querySelector("#qrHolder");
+holder.style.display = "flex";
+holder.style.justifyContent = "center";
+holder.style.alignItems = "center";
+
+holder.appendChild(img);
+
+
+
+
+  await waitForImages(card);
+
+  try{
+    const canvas = await html2canvas(card, { scale:3, useCORS:true, logging:false, backgroundColor:null });
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `konarak_rating_${safeFilename(meta.counter)}_${meta.dateFmt}.png`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1200);
+    });
+  } catch(err){
+    console.error(err);
+    alert("Error generating image");
+  }
 }
+
+/* =====================================
+   EVENT HANDLERS
+===================================== */
+document.addEventListener("DOMContentLoaded",()=>{
+  renderQuestionCards();
+  document.querySelectorAll(".form-control").forEach(s=>s.value=0);
+
+  date.value = new Date().toISOString().slice(0,10);
+
+  computeAndRenderScore();
+  loadEntriesToUI();
+
+  document.getElementById("btnSaveLocal").onclick = saveEntryLocal;
+  document.getElementById("btnLoadLocal").onclick = loadEntriesToUI;
+  document.getElementById("btnClearLocal").onclick = clearLocalEntries;
+
+  document.getElementById("btnDownload").onclick = ()=>generateHDCard();
+
+  document.getElementById("btnReset").onclick = ()=>{
+    building.value=''; floor.value=''; counter.value='';
+    date.value = new Date().toISOString().slice(0,10);
+    document.querySelectorAll(".form-control").forEach(s=>s.value='0');
+    computeAndRenderScore();
+  };
+});
 </script>
 
 </body>
